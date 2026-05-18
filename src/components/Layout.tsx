@@ -5,20 +5,39 @@ import { Header } from './Header'
 import { MobileBottomNav } from './MobileBottomNav'
 import '../styles/layout.css'
 
+const pageTitles: Record<string, string> = {
+  '/': 'Главная',
+  '/payments': 'Платежи',
+  '/payments/create': 'Новый платеж',
+  '/statements': 'Выписки',
+  '/contractors': 'Контрагенты',
+  '/analytics': 'Аналитика',
+  '/notifications': 'Уведомления',
+  '/settings': 'Настройки'
+}
+
 export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
 
+  const currentTitle = pageTitles[location.pathname] ?? 'ДБО'
+
   return (
     <div className="layout">
-      <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+      <Navigation
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
 
-      <div className="layout-body">
-        <Navigation open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="main-content">
+        <Header
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          title={currentTitle}
+        />
 
-        <main className="layout-main">
+        <div className="content-area">
           <Outlet />
-        </main>
+        </div>
       </div>
 
       <MobileBottomNav />

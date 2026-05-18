@@ -5,6 +5,7 @@ import { usePaymentsStore } from '../store/payments'
 import { formatCurrency } from '../utils/format'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import '../styles/pages.css'
 
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user)
@@ -16,100 +17,166 @@ export function DashboardPage() {
 
   const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0)
   const pendingCount = payments.filter(p => p.status === 'created' || p.status === 'signed').length
+  const executedCount = payments.filter(p => p.status === 'executed').length
+
+  const today = format(new Date(), 'EEEE, d MMMM', { locale: ru })
 
   return (
-    <div className="page-container">
+    <div className="page">
       <div className="page-header">
-        <h1>Добро пожаловать, {user?.name}!</h1>
-        <p className="text-gray">Обзор вашей деятельности</p>
+        <h1 className="page-title">Добро пожаловать, {user?.name?.split(' ')[0]}!</h1>
+        <p className="page-subtitle" style={{ textTransform: 'capitalize' }}>{today}</p>
       </div>
 
-      <div className="grid grid-3">
-        <div className="card">
-          <div className="card-header">
-            <h3>Платежей отправлено</h3>
-            <span className="icon">📤</span>
+      {/* KPI Cards */}
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <div className="kpi-card-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
           </div>
-          <div className="card-value">{payments.length}</div>
-          <div className="card-footer">Всего операций</div>
+          <div className="kpi-card-label">Оборот за период</div>
+          <div className="kpi-card-value">{formatCurrency(totalAmount)}</div>
+          <div className="kpi-card-meta">{payments.length} платежей</div>
         </div>
 
-        <div className="card">
-          <div className="card-header">
-            <h3>Общая сумма</h3>
-            <span className="icon">💰</span>
+        <div className="kpi-card">
+          <div className="kpi-card-icon orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
           </div>
-          <div className="card-value">{formatCurrency(totalAmount)}</div>
-          <div className="card-footer">За период</div>
+          <div className="kpi-card-label">На подпись</div>
+          <div className="kpi-card-value">{pendingCount}</div>
+          <div className="kpi-card-meta">Требует действия</div>
         </div>
 
-        <div className="card">
-          <div className="card-header">
-            <h3>На подпись</h3>
-            <span className="icon">✍️</span>
+        <div className="kpi-card">
+          <div className="kpi-card-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
           </div>
-          <div className="card-value text-warning">{pendingCount}</div>
-          <div className="card-footer">Требует действия</div>
+          <div className="kpi-card-label">Исполнено</div>
+          <div className="kpi-card-value">{executedCount}</div>
+          <div className="kpi-card-meta">За период</div>
+        </div>
+
+        <div className="kpi-card">
+          <div className="kpi-card-icon blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+              <rect x="2" y="5" width="20" height="14" rx="2" />
+              <path d="M2 10h20" />
+            </svg>
+          </div>
+          <div className="kpi-card-label">Счетов</div>
+          <div className="kpi-card-value">3</div>
+          <div className="kpi-card-meta">Активных</div>
         </div>
       </div>
 
+      {/* Quick Actions */}
       <div className="section">
         <div className="section-header">
-          <h2>Последние платежи</h2>
-          <Link to="/payments" className="link-secondary">Все платежи →</Link>
+          <h2 className="section-title">Быстрые действия</h2>
         </div>
+        <div className="section-body" style={{ padding: '1rem 1.5rem' }}>
+          <div className="quick-actions" style={{ margin: 0 }}>
+            <Link to="/payments/create" className="quick-action">
+              <div className="quick-action-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="16" />
+                  <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+              </div>
+              <span className="quick-action-label">Новый платеж</span>
+            </Link>
 
-        {payments.length > 0 ? (
-          <div className="payments-list">
-            {payments.slice(0, 5).map((payment) => (
-              <Link key={payment.id} to={`/payments/${payment.id}`} className="payment-item">
-                <div className="payment-info">
-                  <div className="payment-recipient">
-                    <strong>{payment.recipient.name}</strong>
-                    <span className="text-gray">{payment.recipient.account}</span>
-                  </div>
-                  <div className="payment-date">
-                    {format(new Date(payment.date), 'dd MMM yyyy', { locale: ru })}
-                  </div>
-                </div>
-                <div className="payment-amount">
-                  <strong>{formatCurrency(payment.amount)}</strong>
-                  <span className={`badge badge-${getStatusColor(payment.status)}`}>
-                    {getStatusLabel(payment.status)}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <p className="text-gray">Платежей не найдено</p>
-            <Link to="/payments/create" className="btn btn-primary btn-sm">
-              Создать платеж
+            <Link to="/statements" className="quick-action">
+              <div className="quick-action-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                  <line x1="8" y1="17" x2="12" y2="17" />
+                </svg>
+              </div>
+              <span className="quick-action-label">Выписка</span>
+            </Link>
+
+            <Link to="/contractors" className="quick-action">
+              <div className="quick-action-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <line x1="19" y1="8" x2="19" y2="14" />
+                  <line x1="22" y1="11" x2="16" y2="11" />
+                </svg>
+              </div>
+              <span className="quick-action-label">Контрагент</span>
+            </Link>
+
+            <Link to="/analytics" className="quick-action">
+              <div className="quick-action-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                  <line x1="2" y1="20" x2="22" y2="20" />
+                </svg>
+              </div>
+              <span className="quick-action-label">Аналитика</span>
             </Link>
           </div>
-        )}
+        </div>
       </div>
 
+      {/* Recent Payments */}
       <div className="section">
-        <h2>Быстрые действия</h2>
-        <div className="grid grid-2">
-          <Link to="/payments/create" className="action-card">
-            <span className="action-icon">➕</span>
-            <span className="action-label">Новый платеж</span>
-          </Link>
-          <Link to="/statements" className="action-card">
-            <span className="action-icon">📄</span>
-            <span className="action-label">Выписка</span>
-          </Link>
-          <Link to="/contractors" className="action-card">
-            <span className="action-icon">👥</span>
-            <span className="action-label">Контрагенты</span>
-          </Link>
-          <Link to="/analytics" className="action-card">
-            <span className="action-icon">📊</span>
-            <span className="action-label">Аналитика</span>
-          </Link>
+        <div className="section-header">
+          <h2 className="section-title">Последние платежи</h2>
+          <Link to="/payments" className="section-link">Все платежи →</Link>
+        </div>
+
+        <div className="section-body">
+          {payments.length > 0 ? (
+            <div className="tx-list">
+              {payments.slice(0, 6).map((payment) => (
+                <Link key={payment.id} to={`/payments/${payment.id}`} className="tx-item">
+                  <div className="tx-avatar">
+                    {payment.recipient.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="tx-info">
+                    <div className="tx-name">{payment.recipient.name}</div>
+                    <div className="tx-desc">{payment.purpose?.slice(0, 50) ?? payment.recipient.account}</div>
+                  </div>
+                  <div className="tx-right">
+                    <div className="tx-amount">{formatCurrency(payment.amount)}</div>
+                    <div className="tx-date">
+                      {format(new Date(payment.date), 'dd MMM', { locale: ru })}
+                    </div>
+                  </div>
+                  <div style={{ marginLeft: '0.75rem' }}>
+                    <span className={`badge badge-${getStatusColor(payment.status)}`}>
+                      {getStatusLabel(payment.status)}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <div className="empty-state-icon">📋</div>
+              <div className="empty-state-title">Платежей нет</div>
+              <p className="empty-state-text">Создайте первый платеж</p>
+              <Link to="/payments/create" className="btn btn-primary btn-sm">
+                Создать платеж
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -137,7 +204,7 @@ function getStatusLabel(status: string): string {
     approved: 'Одобрен',
     sent: 'Отправлен',
     executed: 'Исполнен',
-    rejected: 'Отклонен'
+    rejected: 'Отклонён'
   }
   return labels[status] || status
 }
