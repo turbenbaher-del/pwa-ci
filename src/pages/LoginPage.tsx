@@ -6,8 +6,6 @@ import '../styles/pages.css'
 export function LoginPage() {
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
-  const [twoFactorCode, setTwoFactorCode] = useState('')
-  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -19,20 +17,8 @@ export function LoginPage() {
     setError('')
 
     try {
-      if (requiresTwoFactor) {
-        await authLogin(login, password, twoFactorCode)
-        navigate('/')
-      } else {
-        // First attempt without 2FA
-        try {
-          await authLogin(login, password)
-          navigate('/')
-        } catch {
-          // Check if 2FA is required
-          setRequiresTwoFactor(true)
-          setError('Введите код подтверждения из приложения')
-        }
-      }
+      await authLogin(login, password)
+      navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при входе')
     } finally {
@@ -51,55 +37,36 @@ export function LoginPage() {
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="alert alert-danger">{error}</div>}
 
-          {!requiresTwoFactor ? (
-            <>
-              <div className="form-group">
-                <label htmlFor="login">Логин</label>
-                <input
-                  id="login"
-                  type="text"
-                  value={login}
-                  onChange={(e) => setLogin(e.target.value)}
-                  placeholder="Введите логин"
-                  required
-                  disabled={loading}
-                />
-              </div>
+          <div className="form-group">
+            <label htmlFor="login">Логин</label>
+            <input
+              id="login"
+              type="text"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="Введите логин"
+              required
+              disabled={loading}
+              autoFocus
+            />
+          </div>
 
-              <div className="form-group">
-                <label htmlFor="password">Пароль</label>
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Введите пароль"
-                  required
-                  disabled={loading}
-                />
-              </div>
-            </>
-          ) : (
-            <div className="form-group">
-              <label htmlFor="twoFactorCode">Код подтверждения</label>
-              <input
-                id="twoFactorCode"
-                type="text"
-                value={twoFactorCode}
-                onChange={(e) => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="000000"
-                maxLength={6}
-                required
-                disabled={loading}
-                autoFocus
-              />
-              <p className="hint-text">Введите 6-значный код из приложения для двухфакторной аутентификации</p>
-            </div>
-          )}
+          <div className="form-group">
+            <label htmlFor="password">Пароль</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Введите пароль"
+              required
+              disabled={loading}
+            />
+          </div>
 
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
             {loading ? <span className="spinner"></span> : null}
-            {requiresTwoFactor ? 'Подтвердить' : 'Войти'}
+            Войти
           </button>
         </form>
 

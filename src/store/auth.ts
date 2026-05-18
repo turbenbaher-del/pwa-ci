@@ -29,26 +29,26 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
 
-      login: async (login: string, password: string, twoFactorCode?: string) => {
-        try {
-          // Simulate API call - replace with actual API
-          const response = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ login, password, twoFactorCode })
-          })
-
-          if (!response.ok) throw new Error('Authentication failed')
-
-          const data = await response.json()
+      login: async (login: string, password: string) => {
+        // Mock authentication - replace with actual API
+        if (login === '24cmvKy8' && password === 'dbocib14Z') {
+          const user: User = {
+            id: '1',
+            login: '24cmvKy8',
+            name: 'Тестовый пользователь',
+            email: 'test@centrinvest.ru',
+            phone: '+7 (999) 999-99-99',
+            role: 'user',
+            permissions: ['payments.view', 'payments.create', 'payments.sign'],
+            lastLogin: new Date()
+          }
           set({
             isAuthenticated: true,
-            user: data.user,
-            token: data.token
+            user,
+            token: 'mock-token-' + Date.now()
           })
-        } catch (error) {
-          console.error('Login error:', error)
-          throw error
+        } else {
+          throw new Error('Неверные учетные данные')
         }
       },
 
