@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useContractorsStore } from '../store/contractors'
+import { PROXY_URL } from '../utils/api'
 import '../styles/pages.css'
 
 export function ContractorsPage() {
@@ -7,6 +8,35 @@ export function ContractorsPage() {
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({ name: '', account: '', bank: '', bic: '', inn: '', email: '' })
+  const [syncing, setSyncing] = useState(false)
+  const [syncMsg, setSyncMsg] = useState('')
+
+  const handleSync = async () => {
+    setSyncing(true)
+    setSyncMsg('')
+    try {
+      const res = await fetch(`${PROXY_URL}/api/templates`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      const list: any[] = Array.isArray(data) ? data : (data.data ?? [])
+      let added = 0
+      for (const t of list) {
+        const name = t.name ?? t.recipientName ?? ''
+        const account = t.account ?? t.recipientAccount ?? ''
+        if (!name || !account) continue
+        const exists = contractors.some(c => c.account === account)
+        if (!exists) {
+          add({ name, account, bank: t.bank ?? '', bic: t.bic ?? '', inn: t.inn ?? '', email: '' })
+          added++
+        }
+      }
+      setSyncMsg(added > 0 ? `Добавлено ${added} контрагентов из банка` : 'Все контрагенты уже актуальны')
+    } catch (e) {
+      setSyncMsg('Не удалось синхронизировать: ' + (e instanceof Error ? e.message : 'ошибка'))
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   const filtered = contractors.filter(c =>
     !search || c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -26,18 +56,35 @@ export function ContractorsPage() {
 
   return (
     <div className="page">
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <h1 className="page-title">Контрагенты</h1>
           <p className="page-subtitle">Реквизиты получателей платежей</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          Добавить
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={handleSync} className="btn btn-secondary" disabled={syncing}>
+            {syncing ? <span className="spinner" /> : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" />
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+              </svg>
+            )}
+            {syncing ? 'Синхронизация...' : 'Из банка'}
+          </button>
+          <button onClick={() => setShowForm(!showForm)} className="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Добавить
+          </button>
+        </div>
       </div>
+
+      {syncMsg && (
+        <div className={`alert ${syncMsg.includes('удалось') ? 'alert-danger' : 'alert-success'}`} style={{ marginBottom: '1rem' }}>
+          {syncMsg}
+        </div>
+      )}
 
       {/* Search */}
       <div className="search-wrapper" style={{ marginBottom: '1.5rem' }}>

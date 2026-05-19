@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { usePaymentsStore } from '../store/payments'
 import { useAccountsStore } from '../store/accounts'
 import { useAuthStore } from '../store/auth'
+import { useContractorsStore } from '../store/contractors'
 import '../styles/pages.css'
 
 export function CreatePaymentPage() {
   const navigate = useNavigate()
   const { createPayment, error, clearError } = usePaymentsStore()
   const { accounts, fetchAccounts } = useAccountsStore()
+  const { contractors } = useContractorsStore()
   const user = useAuthStore(s => s.user)
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState('')
@@ -156,6 +158,31 @@ export function CreatePaymentPage() {
           {/* Recipient section */}
           <div className="form-section">
             <div className="form-section-title">Получатель</div>
+
+            {contractors.length > 0 && (
+              <div className="form-group">
+                <label>Выбрать из контрагентов</label>
+                <select
+                  value=""
+                  onChange={(e) => {
+                    const c = contractors.find(x => x.id === e.target.value)
+                    if (c) setFormData(prev => ({
+                      ...prev,
+                      recipientName: c.name,
+                      recipientAccount: c.account,
+                      recipientBic: c.bic ?? '',
+                      recipientBank: c.bank ?? '',
+                    }))
+                  }}
+                  disabled={loading}
+                >
+                  <option value="">— Выбрать контрагента —</option>
+                  {contractors.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             <div className="form-group">
               <label>Наименование получателя *</label>

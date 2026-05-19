@@ -537,6 +537,39 @@
   margin-bottom: 1.5rem;
 }
 
+/* ─── LOGIN MOBILE BANNER (shown whenever .login-page-mobile is active) ──── */
+.login-mobile-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-gradient);
+  min-height: 130px;
+  padding: 1.75rem 1rem;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.login-mobile-banner::before {
+  content: '';
+  position: absolute;
+  top: -30%; right: -10%;
+  width: 50%; padding-bottom: 50%;
+  background: rgba(255,255,255,0.07);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.login-mobile-banner-logo { position: relative; z-index: 1; }
+.login-mobile-banner-subtitle {
+  color: rgba(255,255,255,0.88);
+  font-size: var(--text-xs);
+  margin-top: 0.5rem;
+  font-family: var(--font-primary);
+  font-weight: 500;
+  position: relative;
+  z-index: 1;
+}
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
@@ -568,41 +601,6 @@
   .login-form-side { padding: 0; min-height: auto; }
   .login-form-container { box-shadow: none; background: transparent; padding: 1.5rem 1rem; }
 
-  /* Mobile login banner (compact hero on top) */
-  .login-mobile-banner {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-primary-gradient);
-    min-height: 120px;
-    padding: 1.5rem 1rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
-  .login-mobile-banner::before {
-    content: '';
-    position: absolute;
-    top: -30%; right: -10%;
-    width: 50%; padding-bottom: 50%;
-    background: rgba(255,255,255,0.07);
-    border-radius: 50%;
-    pointer-events: none;
-  }
-  .login-mobile-banner-subtitle {
-    color: rgba(255,255,255,0.88);
-    font-size: var(--text-xs);
-    margin-top: 0.5rem;
-    font-family: var(--font-primary);
-    font-weight: 500;
-    position: relative;
-    z-index: 1;
-  }
-  .login-mobile-banner-logo {
-    position: relative;
-    z-index: 1;
-  }
   .login-page-mobile {
     display: flex;
     flex-direction: column;
