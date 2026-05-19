@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { toTitleCase } from '../utils/format'
+import { Logo } from './Logo'
 import '../styles/navigation.css'
 import '../styles/layout.css'
 
@@ -118,17 +119,7 @@ export function Navigation({ open, onClose }: NavigationProps) {
       <aside className={`sidebar ${open ? 'open' : ''}`}>
         <div className="sidebar-header">
           <a href="/" className="sidebar-logo">
-            <div className="sidebar-logo-icon">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="white" opacity="0.9" />
-                <path d="M2 17l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.7" />
-                <path d="M2 12l10 5 10-5" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" />
-              </svg>
-            </div>
-            <div className="sidebar-logo-text">
-              <span className="sidebar-logo-name">Центр-инвест</span>
-              <span className="sidebar-logo-sub">Банк</span>
-            </div>
+            <Logo color="white" height={22} />
           </a>
         </div>
 

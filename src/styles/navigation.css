@@ -48,8 +48,8 @@
 .nav-badge {
   min-width: 18px;
   height: 18px;
-  background: var(--color-primary);
-  color: #fff;
+  background: #F9E300;
+  color: #0E100F;
   font-size: 0.625rem;
   font-weight: 700;
   border-radius: var(--radius-full);

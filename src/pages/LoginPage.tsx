@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
+import { Logo } from '../components/Logo'
 import '../styles/pages.css'
 
 export function LoginPage() {
@@ -31,13 +32,8 @@ export function LoginPage() {
       <div className="login-hero">
         <div className="login-hero-content">
           <div className="login-hero-logo">
-            <svg viewBox="0 0 48 48" fill="none">
-              <path d="M24 4L6 14v8l18 10 18-10v-8L24 4z" fill="white" />
-              <path d="M6 26l18 10 18-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.7" />
-              <path d="M6 32l18 10 18-10" stroke="white" strokeWidth="2.5" strokeLinecap="round" fill="none" opacity="0.5" />
-            </svg>
+            <Logo color="white" height={36} />
           </div>
-          <h1 className="login-hero-title">Центр-инвест</h1>
           <p className="login-hero-subtitle">Дистанционное банковское обслуживание</p>
 
           <div className="login-hero-features">

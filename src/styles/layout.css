@@ -29,42 +29,11 @@
 .sidebar-logo {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
   text-decoration: none;
+  opacity: 0.95;
+  transition: opacity 0.2s;
 }
-
-.sidebar-logo-icon {
-  width: 36px;
-  height: 36px;
-  background: var(--color-primary);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.sidebar-logo-text {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.2;
-}
-
-.sidebar-logo-name {
-  font-family: var(--font-primary);
-  font-size: 1rem;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.3px;
-}
-
-.sidebar-logo-sub {
-  font-size: 0.6875rem;
-  color: rgba(255,255,255,0.45);
-  font-weight: 400;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
+.sidebar-logo:hover { opacity: 1; }
 
 .sidebar-nav {
   flex: 1;

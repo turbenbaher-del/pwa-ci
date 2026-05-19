@@ -1,22 +1,24 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Mulish:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap');
 
 /* ─── CSS CUSTOM PROPERTIES ─────────────────────────────────────────────── */
 :root {
-  /* Brand Colors */
+  /* Brand Colors — Центр-инвест Брендбук v1.0.1 */
   --color-primary:       #50B848;
   --color-primary-dark:  #3D8F37;
-  --color-primary-light: #EBF7EA;
+  --color-primary-light: #E8FEEB;
   --color-primary-gradient: linear-gradient(135deg, #3D8F37 0%, #50B848 60%, #65CB5C 100%);
+  --color-yellow:        #F9E300;
+  --color-aqua:          #E5F6F4;
 
   /* Semantic Colors */
-  --color-dark:          #353846;
-  --color-text:          #353846;
-  --color-text-secondary:#9298A9;
-  --color-text-muted:    #B0B5C4;
-  --color-bg:            #F1F2F9;
+  --color-dark:          #0E100F;
+  --color-text:          #0E100F;
+  --color-text-secondary:#5C6370;
+  --color-text-muted:    #9AA0AD;
+  --color-bg:            #F4FDFB;
   --color-surface:       #FFFFFF;
-  --color-border:        #E2E3E8;
-  --color-border-light:  #EDEEF3;
+  --color-border:        #DDF0ED;
+  --color-border-light:  #EEF9F7;
 
   --color-error:         #F3001D;
   --color-warning:       #FE7200;
@@ -24,12 +26,12 @@
   --color-success:       #50B848;
 
   /* Legacy aliases for components */
-  --color-secondary:     #353846;
+  --color-secondary:     #0E100F;
   --color-primary-gradient-old: linear-gradient(135deg, #3D8F37 0%, #50B848 100%);
 
   /* Typography */
   --font-primary: 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body:    'Mulish', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body:    'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
 
   --text-xs:   12px;
   --text-sm:   14px;
