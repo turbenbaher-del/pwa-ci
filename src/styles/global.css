@@ -618,3 +618,27 @@ img, svg { display: block; }
   .page-wrapper { padding: 1rem; }
   .card-body { padding: var(--space-4); }
 }
+
+/* ─── MOBILE-FIRST ENHANCEMENTS ──────────────────────────────────────────── */
+
+/* Touch targets — all interactive elements min 44px */
+@media (max-width: 768px) {
+  button, a.btn, input[type="submit"], input[type="button"] {
+    min-height: 44px;
+  }
+  .btn-sm { min-height: 36px; }
+
+  /* Mobile page horizontal padding */
+  .page-wrapper { padding: 0.75rem 1rem; }
+
+  /* KPI grid narrower min for small screens */
+  /* (handled in pages.css) */
+
+  /* Quick actions 2-col on mobile */
+  .quick-actions { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+@media (max-width: 480px) {
+  h1 { font-size: var(--text-xl); }
+  .btn { font-size: var(--text-xs); }
+}

@@ -1,6 +1,7 @@
 import { useAuthStore } from '../store/auth'
 import { Link, useNavigate } from 'react-router-dom'
 import { toTitleCase } from '../utils/format'
+import { Logo } from './Logo'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -32,6 +33,11 @@ export function Header({ onMenuClick, title }: HeaderProps) {
           </svg>
         </button>
 
+        {/* Logo visible on mobile, hidden on desktop via CSS */}
+        <div className="header-logo-mobile">
+          <Logo color="var(--color-primary)" height={22} />
+        </div>
+
         <div className="header-breadcrumb">
           <span>ДБО</span>
           <span className="header-breadcrumb-sep">›</span>
@@ -40,12 +46,17 @@ export function Header({ onMenuClick, title }: HeaderProps) {
       </div>
 
       <div className="header-right">
-        <Link to="/payments/create" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>
+        <Link
+          to="/payments/create"
+          className="btn btn-primary btn-sm header-new-payment-btn"
+          style={{ textDecoration: 'none' }}
+          title="Новый платеж"
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          Платеж
+          <span className="header-new-payment-text">Платеж</span>
         </Link>
 
         <Link to="/notifications" className="header-icon-btn" title="Уведомления">

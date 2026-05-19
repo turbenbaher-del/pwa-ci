@@ -384,6 +384,21 @@
   grid-template-columns: 1fr 1fr;
 }
 
+/* Desktop layout visible ≥960px, mobile layout hidden */
+.login-page-desktop { display: grid; }
+.login-page-mobile  { display: none; }
+
+@media (max-width: 960px) {
+  /* Switch to mobile layout */
+  .login-page-desktop { display: none !important; }
+  .login-page-mobile  {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--color-bg);
+  }
+}
+
 .login-hero {
   background: var(--color-primary-gradient);
   display: flex;
@@ -524,27 +539,136 @@
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  .form-row { grid-template-columns: 1fr; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Form rows collapse at 640px (not 1024px) */
+@media (max-width: 640px) {
+  .form-row { grid-template-columns: 1fr; }
+  .payments-toolbar { flex-direction: column; align-items: stretch; }
+  .section-header { padding: 0.75rem 1rem; }
+  .form-section { padding: 1rem; }
 }
 
 @media (max-width: 768px) {
   .analytics-grid { grid-template-columns: 1fr; }
   .page { padding: 1rem; }
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .quick-actions { grid-template-columns: repeat(3, 1fr); }
+
+  /* KPI grid: smaller min so 2 fit on phones */
+  .kpi-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  }
+
+  /* Quick actions: 2 columns on mobile */
+  .quick-actions { grid-template-columns: repeat(2, 1fr); }
+
+  /* Login page: single column, hero hidden */
   .login-root, .login-page { grid-template-columns: 1fr; }
   .login-hero { display: none; }
-  .login-form-side { padding: 1.5rem; min-height: 100vh; }
-  .login-form-container { box-shadow: none; background: transparent; padding: 1.5rem 0; }
+  .login-form-side { padding: 0; min-height: auto; }
+  .login-form-container { box-shadow: none; background: transparent; padding: 1.5rem 1rem; }
+
+  /* Mobile login banner (compact hero on top) */
+  .login-mobile-banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-gradient);
+    min-height: 120px;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .login-mobile-banner::before {
+    content: '';
+    position: absolute;
+    top: -30%; right: -10%;
+    width: 50%; padding-bottom: 50%;
+    background: rgba(255,255,255,0.07);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .login-mobile-banner-subtitle {
+    color: rgba(255,255,255,0.88);
+    font-size: var(--text-xs);
+    margin-top: 0.5rem;
+    font-family: var(--font-primary);
+    font-weight: 500;
+    position: relative;
+    z-index: 1;
+  }
+  .login-mobile-banner-logo {
+    position: relative;
+    z-index: 1;
+  }
+  .login-page-mobile {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background: var(--color-bg);
+  }
+
+  /* Data table */
   .data-table { font-size: var(--text-xs); }
-  .data-table th, .data-table td { padding: 0.625rem 1rem; }
-  .payments-toolbar { flex-direction: column; align-items: stretch; }
+  .data-table th, .data-table td { padding: 0.625rem 0.75rem; }
+
+  /* Account cards */
   .account-card { flex-wrap: wrap; }
+  .account-card-number {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: block;
+  }
+  .account-card-copy {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Section padding on mobile */
+  .section-header { padding: 0.75rem 1rem; }
+  .tx-item { padding: 0.75rem 1rem; }
+  .payment-row { padding: 0.75rem 1rem; }
+
+  /* Transaction items: keep avatar+info left, amount right */
+  .tx-item { gap: 0.75rem; }
+
+  /* Notification action buttons */
+  .notification-action-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Contractor delete button */
+  .contractor-delete-btn,
+  [class*="delete-btn"],
+  [class*="action-btn"] {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 480px) {
-  .kpi-grid { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .quick-actions { grid-template-columns: repeat(2, 1fr); }
   .account-card-balance { font-size: var(--text-base); }
+  .page { padding: 0.75rem; }
+
+  /* Stack tx items on very small screens */
+  .tx-item {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .tx-right {
+    margin-left: auto;
+  }
 }

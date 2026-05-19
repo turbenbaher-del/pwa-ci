@@ -196,6 +196,9 @@
 }
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
+/* Hide mobile logo on desktop */
+.header-logo-mobile { display: none; }
+
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -215,4 +218,25 @@
   .header-breadcrumb { display: none; }
   .header-user-name { display: none; }
   .content-area { padding-bottom: 64px; }
+
+  /* Show Logo in header on mobile */
+  .header-logo-mobile {
+    display: flex;
+    align-items: center;
+  }
+
+  /* "New Payment" button — icon only, hide text */
+  .header-new-payment-text { display: none; }
+  .header-new-payment-btn {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 0 0.5rem;
+  }
+
+  /* Header touch targets */
+  .header-icon-btn,
+  .header-menu-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }

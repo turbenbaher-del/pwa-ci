@@ -182,7 +182,7 @@ export function DashboardPage() {
         <div className="section-body">
           {payments.length > 0 ? (
             <div className="tx-list">
-              {payments.slice(0, 6).map((payment) => (
+              {payments.slice(0, 5).map((payment) => (
                 <Link key={payment.id} to={`/payments/${payment.id}`} className="tx-item">
                   <div className="tx-avatar">
                     {payment.recipient.name.charAt(0).toUpperCase()}
