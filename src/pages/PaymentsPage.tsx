@@ -9,14 +9,24 @@ import '../styles/pages.css'
 export function PaymentsPage() {
   const { payments, fetchPayments, loading } = usePaymentsStore()
   const [statusFilter, setStatusFilter] = useState('')
+  const [search, setSearch] = useState('')
 
   useEffect(() => {
     fetchPayments()
   }, [fetchPayments])
 
-  const filteredPayments = payments.filter(
-    p => !statusFilter || p.status === statusFilter
-  )
+  const filteredPayments = payments.filter(p => {
+    if (statusFilter && p.status !== statusFilter) return false
+    if (search) {
+      const q = search.toLowerCase()
+      return (
+        p.recipient.name.toLowerCase().includes(q) ||
+        (p.purpose ?? '').toLowerCase().includes(q) ||
+        p.recipient.account.includes(q)
+      )
+    }
+    return true
+  })
 
   return (
     <div className="page">
@@ -46,6 +56,17 @@ export function PaymentsPage() {
               {s === '' ? 'Все' : getStatusLabel(s)}
             </button>
           ))}
+        </div>
+        <div className="search-wrapper" style={{ marginBottom: 0, minWidth: 220 }}>
+          <svg className="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            className="search-input"
+            placeholder="Поиск по получателю..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
       </div>
 
@@ -93,14 +114,16 @@ export function PaymentsPage() {
           <div className="empty-state">
             <div className="empty-state-icon">💳</div>
             <div className="empty-state-title">
-              {statusFilter ? 'Платежей с таким статусом нет' : 'Платежей ещё нет'}
+              {search ? 'Ничего не найдено' : statusFilter ? 'Платежей с таким статусом нет' : 'Платежей ещё нет'}
             </div>
             <p className="empty-state-text">
-              {statusFilter
-                ? 'Попробуйте изменить фильтр или сбросить его'
-                : 'Создайте первый платёж, чтобы он появился здесь'}
+              {search
+                ? 'Попробуйте изменить поисковый запрос'
+                : statusFilter
+                  ? 'Попробуйте изменить фильтр или сбросить его'
+                  : 'Создайте первый платёж, чтобы он появился здесь'}
             </p>
-            {!statusFilter && (
+            {!statusFilter && !search && (
               <Link to="/payments/create" className="btn btn-primary btn-sm">
                 Создать платёж
               </Link>

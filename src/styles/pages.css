@@ -514,6 +514,14 @@
   line-height: 1.6;
 }
 
+/* ─── ANALYTICS GRID ────────────────────────────────────────────────────── */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
   .form-row { grid-template-columns: 1fr; }
@@ -521,6 +529,7 @@
 }
 
 @media (max-width: 768px) {
+  .analytics-grid { grid-template-columns: 1fr; }
   .page { padding: 1rem; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
   .quick-actions { grid-template-columns: repeat(3, 1fr); }

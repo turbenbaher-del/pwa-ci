@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { useThemeStore } from '../store/theme'
+import { toTitleCase } from '../utils/format'
 import '../styles/pages.css'
 
 export function SettingsPage() {
@@ -80,7 +81,7 @@ export function SettingsPage() {
           </div>
           <div style={sectionBody}>
             {[
-              { label: 'Имя', value: user?.name || '—' },
+              { label: 'Имя', value: user?.name ? toTitleCase(user.name) : '—' },
               { label: 'Логин', value: user?.login || '—' },
               { label: 'Роль', value: user?.role === 'admin' ? 'Администратор' : user?.role === 'accountant' ? 'Бухгалтер' : 'Пользователь' },
             ].map(({ label, value }, i, arr) => (

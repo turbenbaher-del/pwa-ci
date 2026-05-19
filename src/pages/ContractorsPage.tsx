@@ -1,23 +1,9 @@
 import { useState } from 'react'
+import { useContractorsStore } from '../store/contractors'
 import '../styles/pages.css'
 
-interface Contractor {
-  id: string
-  name: string
-  account: string
-  bank: string
-  bic: string
-  inn?: string
-  email?: string
-}
-
-const SAMPLE: Contractor[] = [
-  { id: '1', name: 'ООО Поставщик', account: '40702810500000000001', bank: 'Сбербанк', bic: '044525999', inn: '7743013419', email: 'info@supplier.ru' },
-  { id: '2', name: 'ИП Клиентов А.В.', account: '40802810500000000002', bank: 'Альфа-Банк', bic: '044585100', inn: '616500000000', email: 'client@example.ru' },
-]
-
 export function ContractorsPage() {
-  const [contractors, setContractors] = useState<Contractor[]>(SAMPLE)
+  const { contractors, add, remove } = useContractorsStore()
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({ name: '', account: '', bank: '', bic: '', inn: '', email: '' })
@@ -29,13 +15,13 @@ export function ContractorsPage() {
 
   const handleAdd = () => {
     if (!form.name.trim() || !form.account.trim()) return
-    setContractors(prev => [...prev, { id: Date.now().toString(), ...form }])
+    add(form)
     setForm({ name: '', account: '', bank: '', bic: '', inn: '', email: '' })
     setShowForm(false)
   }
 
   const handleDelete = (id: string) => {
-    setContractors(prev => prev.filter(c => c.id !== id))
+    remove(id)
   }
 
   return (

@@ -1,5 +1,5 @@
 import { useAuthStore } from '../store/auth'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toTitleCase } from '../utils/format'
 
 interface HeaderProps {
@@ -8,7 +8,8 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick, title }: HeaderProps) {
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
+  const navigate = useNavigate()
 
   const initials = user?.name
     .split(' ')
@@ -68,8 +69,8 @@ export function Header({ onMenuClick, title }: HeaderProps) {
 
         <button
           className="header-user-btn"
-          onClick={logout}
-          title="Выйти"
+          onClick={() => navigate('/settings')}
+          title="Настройки профиля"
           style={{ cursor: 'pointer' }}
         >
           <div className="avatar avatar-sm">{initials}</div>
