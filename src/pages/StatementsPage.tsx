@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useAccountsStore } from '../store/accounts'
-import { PROXY_URL } from '../utils/api'
 import '../styles/pages.css'
 
 export function StatementsPage() {
