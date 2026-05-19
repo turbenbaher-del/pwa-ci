@@ -1,74 +1,107 @@
 import { useState } from 'react'
+import { useAccountsStore } from '../store/accounts'
+import { PROXY_URL } from '../utils/api'
+import '../styles/pages.css'
 
 export function StatementsPage() {
-  const [dateFrom, setDateFrom] = useState(new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0])
+  const { accounts } = useAccountsStore()
+  const [account, setAccount] = useState('')
+  const [dateFrom, setDateFrom] = useState(new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0])
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
-  const [format, setFormat] = useState('pdf')
+  const [fmt, setFmt] = useState('pdf')
   const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState('')
 
   const handleExport = async () => {
     setLoading(true)
+    setMessage('')
     try {
-      // Имитация экспорта
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      alert(`Выписка выгружена в формате ${format.toUpperCase()}`)
-    } catch (error) {
-      alert('Ошибка при экспорте')
+      await new Promise(resolve => setTimeout(resolve, 1500))
+      setMessage(`Выписка за ${dateFrom} — ${dateTo} выгружена в формате ${fmt.toUpperCase()}`)
+    } catch {
+      setMessage('Ошибка при формировании выписки')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="page-container">
-      <h1>Выписки</h1>
-      <p className="text-gray">Скачать выписку по счету за указанный период</p>
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Выписки</h1>
+          <p className="page-subtitle">Скачать выписку по счёту за указанный период</p>
+        </div>
+      </div>
 
-      <div style={{ maxWidth: '500px' }}>
-        <div className="card">
-          <div className="form-group">
-            <label>Период</label>
-            <div className="flex" style={{ gap: '0.75rem' }}>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-              <span style={{ alignSelf: 'center' }}>—</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
+      <div style={{ maxWidth: 560 }}>
+        <div className="form-section">
+          <div className="form-section-title">Параметры выписки</div>
+
+          {accounts.length > 0 && (
+            <div className="form-group">
+              <label>Счёт</label>
+              <select value={account} onChange={e => setAccount(e.target.value)}>
+                <option value="">Все счета</option>
+                {accounts.map(a => (
+                  <option key={a.number} value={a.number}>
+                    {a.number.replace(/(\d{5})(\d{3})(\d)(\d{11})/, '$1.$2.$3.$4')} — {a.currency}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>С даты</label>
+              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label>По дату</label>
+              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} />
             </div>
           </div>
 
           <div className="form-group">
             <label>Формат выписки</label>
-            <select value={format} onChange={(e) => setFormat(e.target.value)}>
-              <option value="pdf">PDF - Портативный документ</option>
-              <option value="xlsx">XLSX - Microsoft Excel</option>
-              <option value="csv">CSV - Текстовый формат</option>
-              <option value="1c">1C - Формат 1С бухгалтерии</option>
+            <select value={fmt} onChange={e => setFmt(e.target.value)}>
+              <option value="pdf">PDF — Портативный документ</option>
+              <option value="xlsx">XLSX — Microsoft Excel</option>
+              <option value="csv">CSV — Текстовый формат</option>
+              <option value="1c">1С — Формат 1С бухгалтерии</option>
             </select>
           </div>
 
-          <button
-            onClick={handleExport}
-            disabled={loading}
-            className="btn btn-primary btn-block"
-          >
-            {loading ? <span className="spinner"></span> : null}
-            📥 Скачать выписку
+          {message && (
+            <div className={`alert ${message.includes('Ошибка') ? 'alert-error' : 'alert-success'}`} style={{ marginBottom: '1rem' }}>
+              {message}
+            </div>
+          )}
+
+          <button onClick={handleExport} disabled={loading} className="btn btn-primary btn-block">
+            {loading ? <span className="spinner" /> : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            )}
+            {loading ? 'Формирование...' : 'Скачать выписку'}
           </button>
         </div>
 
-        <div className="card" style={{ background: 'var(--gray-50)', marginTop: '1.5rem' }}>
-          <h4 style={{ margin: '0 0 0.75rem 0' }}>ℹ️ Информация</h4>
-          <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-            Выписка содержит все операции по счету за указанный период.
-            Доступны форматы: PDF, Excel, CSV и 1С. Файл будет загружен автоматически.
-          </p>
+        <div className="section" style={{ marginTop: '1rem' }}>
+          <div className="section-header">
+            <h2 className="section-title">Информация</h2>
+          </div>
+          <div className="section-body" style={{ padding: '1rem 1.5rem' }}>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)' }}>
+              Выписка содержит все операции по счёту за указанный период.
+              Форматы PDF и Excel подходят для печати и хранения, CSV — для импорта в учётные системы,
+              формат 1С — для прямой загрузки в 1С Бухгалтерия.
+            </p>
+          </div>
         </div>
       </div>
     </div>

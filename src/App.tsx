@@ -5,6 +5,7 @@ import { useThemeStore } from './store/theme'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
 import { DashboardPage } from './pages/DashboardPage'
+import { AccountsPage } from './pages/AccountsPage'
 import { PaymentsPage } from './pages/PaymentsPage'
 import { CreatePaymentPage } from './pages/CreatePaymentPage'
 import { PaymentDetailsPage } from './pages/PaymentDetailsPage'
@@ -23,12 +24,13 @@ export function App() {
   }, [isDark])
 
   return (
-    <Router>
+    <Router basename="/pwa-ci">
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 
         <Route element={isAuthenticated ? <Layout /> : <Navigate to="/login" />}>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/accounts" element={<AccountsPage />} />
           <Route path="/payments" element={<PaymentsPage />} />
           <Route path="/payments/create" element={<CreatePaymentPage />} />
           <Route path="/payments/:id" element={<PaymentDetailsPage />} />

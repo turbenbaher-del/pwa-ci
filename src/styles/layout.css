@@ -5,7 +5,7 @@
   background: var(--color-bg);
 }
 
-/* SIDEBAR */
+/* ─── SIDEBAR ────────────────────────────────────────────────────────────── */
 .sidebar {
   width: var(--sidebar-width);
   height: 100vh;
@@ -14,15 +14,16 @@
   flex-direction: column;
   flex-shrink: 0;
   overflow: hidden;
-  transition: var(--transition);
+  transition: transform 0.25s ease;
   position: relative;
   z-index: 100;
 }
 
 .sidebar-header {
   padding: 1.25rem 1.25rem 1rem;
-  background: rgba(0,0,0,0.15);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  background: rgba(0,0,0,0.12);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  flex-shrink: 0;
 }
 
 .sidebar-logo {
@@ -50,6 +51,7 @@
 }
 
 .sidebar-logo-name {
+  font-family: var(--font-primary);
   font-size: 1rem;
   font-weight: 700;
   color: #fff;
@@ -60,7 +62,7 @@
   font-size: 0.6875rem;
   color: rgba(255,255,255,0.45);
   font-weight: 400;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -75,17 +77,19 @@
 
 .sidebar-section-label {
   padding: 0.75rem 1.25rem 0.25rem;
-  font-size: 0.6875rem;
+  font-family: var(--font-primary);
+  font-size: 0.625rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.3);
+  color: rgba(255,255,255,0.28);
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
 }
 
 .sidebar-footer {
   padding: 0.875rem 1.25rem;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  border-top: 1px solid rgba(255,255,255,0.07);
   background: rgba(0,0,0,0.1);
+  flex-shrink: 0;
 }
 
 .sidebar-user {
@@ -97,12 +101,11 @@
   border-radius: var(--radius-sm);
   transition: var(--transition);
 }
-
 .sidebar-user:hover { background: rgba(255,255,255,0.07); }
 
 .sidebar-user-info { flex: 1; min-width: 0; }
 .sidebar-user-name { font-size: 0.875rem; font-weight: 500; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sidebar-user-role { font-size: 0.75rem; color: rgba(255,255,255,0.45); }
+.sidebar-user-role { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
 
 .sidebar-logout-btn {
   background: none;
@@ -110,14 +113,14 @@
   cursor: pointer;
   padding: 0.375rem;
   border-radius: var(--radius-sm);
-  color: rgba(255,255,255,0.4);
+  color: rgba(255,255,255,0.38);
   transition: var(--transition);
   display: flex;
   align-items: center;
 }
 .sidebar-logout-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
 
-/* MAIN CONTENT */
+/* ─── MAIN CONTENT ───────────────────────────────────────────────────────── */
 .main-content {
   flex: 1;
   display: flex;
@@ -126,7 +129,7 @@
   min-width: 0;
 }
 
-/* HEADER */
+/* ─── HEADER ─────────────────────────────────────────────────────────────── */
 .header {
   height: var(--header-height);
   background: var(--color-surface);
@@ -168,7 +171,7 @@
   color: var(--color-text-secondary);
 }
 .header-breadcrumb-sep { color: var(--color-border); }
-.header-breadcrumb-current { color: var(--color-text); font-weight: 500; }
+.header-breadcrumb-current { color: var(--color-text); font-weight: 500; font-family: var(--font-primary); }
 
 .header-right {
   display: flex;
@@ -188,6 +191,7 @@
   align-items: center;
   justify-content: center;
   transition: var(--transition);
+  text-decoration: none;
 }
 .header-icon-btn:hover { background: var(--color-bg); color: var(--color-text); }
 
@@ -203,25 +207,26 @@
   transition: var(--transition);
 }
 .header-user-btn:hover { background: var(--color-bg); }
-.header-user-name { font-size: 0.875rem; font-weight: 500; color: var(--color-text); }
+.header-user-name { font-size: 0.875rem; font-weight: 500; color: var(--color-text); font-family: var(--font-primary); }
 
-/* CONTENT */
+/* ─── CONTENT AREA ───────────────────────────────────────────────────────── */
 .content-area {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
 }
 
-/* MOBILE OVERLAY */
+/* ─── SIDEBAR OVERLAY ────────────────────────────────────────────────────── */
 .sidebar-overlay {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.45);
   z-index: 99;
   backdrop-filter: blur(2px);
 }
 
+/* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -229,6 +234,7 @@
     height: 100vh;
     transform: translateX(-100%);
     z-index: 200;
+    box-shadow: none;
   }
   .sidebar.open {
     transform: translateX(0);
@@ -238,5 +244,6 @@
   .main-content { width: 100%; }
   .header { padding: 0 1rem; }
   .header-breadcrumb { display: none; }
+  .header-user-name { display: none; }
   .content-area { padding-bottom: 64px; }
 }

@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { usePaymentsStore } from '../store/payments'
+import { useAccountsStore } from '../store/accounts'
 import { formatCurrency } from '../utils/format'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -10,12 +11,15 @@ import '../styles/pages.css'
 export function DashboardPage() {
   const user = useAuthStore((state) => state.user)
   const { payments, fetchPayments } = usePaymentsStore()
+  const { accounts, loading: accountsLoading, fetchAccounts } = useAccountsStore()
 
   useEffect(() => {
     fetchPayments({ status: 'sent' })
-  }, [fetchPayments])
+    fetchAccounts()
+  }, [fetchPayments, fetchAccounts])
 
-  const totalAmount = payments.reduce((sum, p) => sum + p.amount, 0)
+  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0)
+  const openAccounts = accounts.filter(a => a.status === 'Открыт')
   const pendingCount = payments.filter(p => p.status === 'created' || p.status === 'signed').length
   const executedCount = payments.filter(p => p.status === 'executed').length
 
@@ -36,9 +40,11 @@ export function DashboardPage() {
               <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
           </div>
-          <div className="kpi-card-label">Оборот за период</div>
-          <div className="kpi-card-value">{formatCurrency(totalAmount)}</div>
-          <div className="kpi-card-meta">{payments.length} платежей</div>
+          <div className="kpi-card-label">Общий остаток</div>
+          <div className="kpi-card-value">
+            {accountsLoading ? '...' : formatCurrency(totalBalance)}
+          </div>
+          <div className="kpi-card-meta">По всем счетам (RUR)</div>
         </div>
 
         <div className="kpi-card">
@@ -72,10 +78,42 @@ export function DashboardPage() {
             </svg>
           </div>
           <div className="kpi-card-label">Счетов</div>
-          <div className="kpi-card-value">3</div>
+          <div className="kpi-card-value">
+            {accountsLoading ? '...' : openAccounts.length}
+          </div>
           <div className="kpi-card-meta">Активных</div>
         </div>
       </div>
+
+      {/* Accounts list */}
+      {accounts.length > 0 && (
+        <div className="section">
+          <div className="section-header">
+            <h2 className="section-title">Счета</h2>
+          </div>
+          <div className="section-body">
+            <div className="tx-list">
+              {accounts.map((acc) => (
+                <div key={acc.number} className="tx-item">
+                  <div className="tx-avatar" style={{ fontSize: '0.7rem', letterSpacing: '-0.5px' }}>
+                    {acc.currency}
+                  </div>
+                  <div className="tx-info">
+                    <div className="tx-name" style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                      {acc.number.replace(/(\d{5})(\d{3})(\d)(\d{11})/, '$1.$2.$3.$4')}
+                    </div>
+                    <div className="tx-desc">{acc.status}</div>
+                  </div>
+                  <div className="tx-right">
+                    <div className="tx-amount">{formatCurrency(acc.balance)}</div>
+                    <div className="tx-date">{acc.currency}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
       <div className="section">

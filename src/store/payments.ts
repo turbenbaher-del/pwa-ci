@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { PROXY_URL } from '../utils/api'
 
 export interface Payment {
   id: string
@@ -69,18 +70,38 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
         if (filters.search) params.append('search', filters.search)
       }
 
-      const response = await fetch(`/api/payments?${params}`)
+      const response = await fetch(`${PROXY_URL}/api/payments?${params}`)
       if (!response.ok) throw new Error('Failed to fetch payments')
 
       const data = await response.json()
+      // API returns { success, data: [] } — handle both shapes
+      const list = Array.isArray(data) ? data : (data.data ?? [])
+      const parseDate = (d: any) => {
+        if (!d) return new Date()
+        const s = String(d)
+        const m = s.match(/^(\d{2})\.(\d{2})\.(\d{4})/)
+        if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]))
+        return new Date(d)
+      }
       set({
-        payments: data.map((p: any) => ({
-          ...p,
-          date: new Date(p.date),
-          createdAt: new Date(p.createdAt),
-          modifiedAt: new Date(p.modifiedAt),
-          signedAt: p.signedAt ? new Date(p.signedAt) : undefined,
-          approvedAt: p.approvedAt ? new Date(p.approvedAt) : undefined
+        payments: list.map((p: any) => ({
+          id: p.id ?? p.number ?? String(Math.random()),
+          status: p.status ?? 'executed',
+          amount: p.amount ?? 0,
+          currency: p.currency ?? 'RUR',
+          date: parseDate(p.date ?? p.createdAt),
+          recipient: typeof p.recipient === 'string'
+            ? { name: p.recipient, account: '', bank: '', bic: '' }
+            : (p.recipient ?? { name: '', account: '', bank: '', bic: '' }),
+          payer: p.payer ?? { name: '', account: '' },
+          purpose: p.purpose ?? p.number ?? '',
+          priority: p.priority ?? 'normal',
+          commissionPayment: p.commissionPayment ?? 'payer',
+          details: p.details ?? {},
+          createdAt: parseDate(p.createdAt ?? p.date),
+          modifiedAt: parseDate(p.modifiedAt ?? p.date ?? p.createdAt),
+          signedAt: p.signedAt ? parseDate(p.signedAt) : undefined,
+          approvedAt: p.approvedAt ? parseDate(p.approvedAt) : undefined,
         })),
         loading: false
       })
@@ -98,7 +119,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
 
   createPayment: async (payment) => {
     try {
-      const response = await fetch('/api/payments', {
+      const response = await fetch(`${PROXY_URL}/api/payments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payment)
@@ -128,7 +149,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
 
   updatePayment: async (id, updates) => {
     try {
-      const response = await fetch(`/api/payments/${id}`, {
+      const response = await fetch(`${PROXY_URL}/api/payments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
@@ -149,7 +170,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
 
   signPayment: async (id, signature, twoFactorCode) => {
     try {
-      const response = await fetch(`/api/payments/${id}/sign`, {
+      const response = await fetch(`${PROXY_URL}/api/payments/${id}/sign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ signature, twoFactorCode })
@@ -177,7 +198,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
 
   deletePayment: async (id) => {
     try {
-      const response = await fetch(`/api/payments/${id}`, {
+      const response = await fetch(`${PROXY_URL}/api/payments/${id}`, {
         method: 'DELETE'
       })
 

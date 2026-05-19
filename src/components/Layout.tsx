@@ -7,6 +7,7 @@ import '../styles/layout.css'
 
 const pageTitles: Record<string, string> = {
   '/': 'Главная',
+  '/accounts': 'Счета',
   '/payments': 'Платежи',
   '/payments/create': 'Новый платеж',
   '/statements': 'Выписки',
