@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
+import { toTitleCase } from '../utils/format'
 import '../styles/navigation.css'
 import '../styles/layout.css'
 
@@ -160,7 +161,7 @@ export function Navigation({ open, onClose }: NavigationProps) {
               {initials}
             </div>
             <div className="sidebar-user-info">
-              <div className="sidebar-user-name">{user?.name ?? 'Пользователь'}</div>
+              <div className="sidebar-user-name">{user?.name ? toTitleCase(user.name) : 'Пользователь'}</div>
               <div className="sidebar-user-role">{user?.login}</div>
             </div>
             <button className="sidebar-logout-btn" onClick={logout} title="Выйти">

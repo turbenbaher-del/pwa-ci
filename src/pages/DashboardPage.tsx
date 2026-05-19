@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { usePaymentsStore } from '../store/payments'
 import { useAccountsStore } from '../store/accounts'
-import { formatCurrency } from '../utils/format'
+import { formatCurrency, getFirstName } from '../utils/format'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import '../styles/pages.css'
@@ -28,7 +28,7 @@ export function DashboardPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">Добро пожаловать, {user?.name?.split(' ')[0]}!</h1>
+        <h1 className="page-title">Добро пожаловать, {user?.name ? getFirstName(user.name) : ''}!</h1>
         <p className="page-subtitle" style={{ textTransform: 'capitalize' }}>{today}</p>
       </div>
 

@@ -1,5 +1,6 @@
 import { useAuthStore } from '../store/auth'
 import { Link } from 'react-router-dom'
+import { toTitleCase } from '../utils/format'
 
 interface HeaderProps {
   onMenuClick: () => void
@@ -72,7 +73,7 @@ export function Header({ onMenuClick, title }: HeaderProps) {
           style={{ cursor: 'pointer' }}
         >
           <div className="avatar avatar-sm">{initials}</div>
-          <span className="header-user-name">{user?.name}</span>
+          <span className="header-user-name">{user?.name ? toTitleCase(user.name) : ''}</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <polyline points="6 9 12 15 18 9" />
           </svg>

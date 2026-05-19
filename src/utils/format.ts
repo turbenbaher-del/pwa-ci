@@ -46,3 +46,17 @@ export function abbreviateName(name: string): string {
     .map(n => n.charAt(0).toUpperCase())
     .join('')
 }
+
+// Convert ALL-CAPS Russian name to Title Case: "ПОПЕНКОВ СЕРГЕЙ" → "Попенков Сергей"
+export function toTitleCase(name: string): string {
+  return name
+    .split(' ')
+    .map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : '')
+    .join(' ')
+}
+
+// Extract first name from "SURNAME FIRSTNAME [PATRONYMIC]" bank format
+export function getFirstName(name: string): string {
+  const parts = toTitleCase(name).split(' ')
+  return parts[1] ?? parts[0] ?? name
+}
