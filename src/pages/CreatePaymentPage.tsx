@@ -14,6 +14,7 @@ export function CreatePaymentPage() {
   const user = useAuthStore(s => s.user)
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState('')
+  const [successMsg, setSuccessMsg] = useState('')
 
   const [formData, setFormData] = useState({
     payerAccount:      '',
@@ -79,9 +80,10 @@ export function CreatePaymentPage() {
     if (!validate()) return
 
     setLoading(true)
+    setSuccessMsg('')
     try {
       const selectedAccount = accounts.find(a => a.number === formData.payerAccount)
-      await createPayment({
+      const created = await createPayment({
         status: 'draft',
         amount: parseFloat(formData.amount),
         currency: formData.currency,
@@ -101,7 +103,11 @@ export function CreatePaymentPage() {
         commissionPayment: formData.commissionPayment,
         details:           { payerCurrency: selectedAccount?.currency ?? 'RUB' },
       })
-      navigate('/payments')
+      if (created.status === 'created' || created.status === 'sent') {
+        navigate('/payments')
+      } else {
+        setSuccessMsg('Платёж сохранён как черновик. Откройте ДБО банка для подписи и отправки.')
+      }
     } catch {
       // error from store is shown below
     } finally {
@@ -121,6 +127,15 @@ export function CreatePaymentPage() {
       </div>
 
       <div style={{ maxWidth: 680 }}>
+        {successMsg && (
+          <div className="alert alert-success" style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 2 }}>
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            {successMsg}
+          </div>
+        )}
+
         {displayError && (
           <div className="alert alert-error">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>

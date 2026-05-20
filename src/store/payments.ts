@@ -135,12 +135,17 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
 
       if (!response.ok) throw new Error('Failed to create payment')
 
-      const data = await response.json()
+      const json = await response.json()
+      if (json.error && !json.data) throw new Error(json.error)
+      const data = json.data ?? json
       const newPayment: Payment = {
         ...data,
-        date: new Date(data.date),
-        createdAt: new Date(data.createdAt),
-        modifiedAt: new Date(data.modifiedAt)
+        date: data.date ? new Date(data.date) : new Date(),
+        createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+        modifiedAt: data.modifiedAt ? new Date(data.modifiedAt) : new Date(),
+      }
+      if (json.success === false && json.error) {
+        set({ error: 'Черновик сохранён локально. Ошибка отправки в банк: ' + json.error })
       }
 
       set((state) => ({
