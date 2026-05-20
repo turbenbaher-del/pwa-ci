@@ -83,10 +83,18 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
         if (m) return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1]))
         return new Date(d)
       }
+      const normalizeStatus = (s: string): Payment['status'] => {
+        const map: Record<string, Payment['status']> = {
+          'ГО': 'executed', 'ИСПОЛНЕН': 'executed', 'executed': 'executed',
+          'draft': 'draft', 'created': 'created', 'signed': 'signed',
+          'approved': 'approved', 'sent': 'sent', 'rejected': 'rejected',
+        }
+        return map[s] ?? 'executed'
+      }
       set({
         payments: list.map((p: any) => ({
           id: p.id ?? p.number ?? String(Math.random()),
-          status: p.status ?? 'executed',
+          status: normalizeStatus(p.status ?? 'executed'),
           amount: p.amount ?? 0,
           currency: p.currency ?? 'RUR',
           date: parseDate(p.date ?? p.createdAt),

@@ -96,7 +96,9 @@ export function PaymentsPage() {
                     </div>
                   </div>
                   <div className="tx-right">
-                    <div className="tx-amount">{formatCurrency(payment.amount)}</div>
+                    <div className="tx-amount" style={{ color: payment.amount >= 0 ? 'var(--color-success)' : 'var(--color-danger, #e53e3e)' }}>
+                      {payment.amount >= 0 ? '+' : ''}{formatCurrency(payment.amount)}
+                    </div>
                     <div className="tx-date">
                       {format(new Date(payment.date), 'dd MMM yyyy', { locale: ru })}
                     </div>

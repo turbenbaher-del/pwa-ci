@@ -14,14 +14,16 @@ export function DashboardPage() {
   const { accounts, loading: accountsLoading, fetchAccounts } = useAccountsStore()
 
   useEffect(() => {
-    fetchPayments({ status: 'sent' })
+    fetchPayments()
     fetchAccounts()
   }, [fetchPayments, fetchAccounts])
 
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0)
   const openAccounts = accounts.filter(a => a.status === 'Открыт')
-  const pendingCount = payments.filter(p => p.status === 'created' || p.status === 'signed').length
-  const executedCount = payments.filter(p => p.status === 'executed').length
+  const pendingCount = payments.filter(p => p.status === 'created' || p.status === 'signed' || p.status === 'draft').length
+  const executedCount = payments.filter(p => p.status === 'executed' || (p.status as string) === 'ГО').length
+  const totalIncoming = payments.filter(p => p.amount > 0).reduce((s, p) => s + p.amount, 0)
+  const totalOutgoing = payments.filter(p => p.amount < 0).reduce((s, p) => s + Math.abs(p.amount), 0)
 
   const today = format(new Date(), 'EEEE, d MMMM', { locale: ru })
 
@@ -48,25 +50,30 @@ export function DashboardPage() {
         </div>
 
         <div className="kpi-card">
-          <div className="kpi-card-icon orange">
+          <div className="kpi-card-icon green">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              <polyline points="17 6 23 6 23 12" />
             </svg>
           </div>
-          <div className="kpi-card-label">На подпись</div>
-          <div className="kpi-card-value">{pendingCount}</div>
-          <div className="kpi-card-meta">Требует действия</div>
+          <div className="kpi-card-label">Поступления</div>
+          <div className="kpi-card-value" style={{ fontSize: '1rem' }}>
+            {payments.length > 0 ? formatCurrency(totalIncoming) : '—'}
+          </div>
+          <div className="kpi-card-meta">За период</div>
         </div>
 
         <div className="kpi-card">
-          <div className="kpi-card-icon green">
+          <div className="kpi-card-icon orange">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
-              <polyline points="20 6 9 17 4 12" />
+              <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
+              <polyline points="17 18 23 18 23 12" />
             </svg>
           </div>
-          <div className="kpi-card-label">Исполнено</div>
-          <div className="kpi-card-value">{executedCount}</div>
+          <div className="kpi-card-label">Списания</div>
+          <div className="kpi-card-value" style={{ fontSize: '1rem' }}>
+            {payments.length > 0 ? formatCurrency(totalOutgoing) : '—'}
+          </div>
           <div className="kpi-card-meta">За период</div>
         </div>
 
@@ -192,7 +199,9 @@ export function DashboardPage() {
                     <div className="tx-desc">{payment.purpose?.slice(0, 50) ?? payment.recipient.account}</div>
                   </div>
                   <div className="tx-right">
-                    <div className="tx-amount">{formatCurrency(payment.amount)}</div>
+                    <div className="tx-amount" style={{ color: payment.amount >= 0 ? 'var(--color-success)' : 'var(--color-danger, #e53e3e)' }}>
+                      {payment.amount >= 0 ? '+' : ''}{formatCurrency(payment.amount)}
+                    </div>
                     <div className="tx-date">
                       {format(new Date(payment.date), 'dd MMM', { locale: ru })}
                     </div>
