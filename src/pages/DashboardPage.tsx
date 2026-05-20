@@ -20,8 +20,6 @@ export function DashboardPage() {
 
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0)
   const openAccounts = accounts.filter(a => a.status === 'Открыт')
-  const pendingCount = payments.filter(p => p.status === 'created' || p.status === 'signed' || p.status === 'draft').length
-  const executedCount = payments.filter(p => p.status === 'executed' || (p.status as string) === 'ГО').length
   const totalIncoming = payments.filter(p => p.amount > 0).reduce((s, p) => s + p.amount, 0)
   const totalOutgoing = payments.filter(p => p.amount < 0).reduce((s, p) => s + Math.abs(p.amount), 0)
 

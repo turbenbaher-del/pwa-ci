@@ -1,10 +1,9 @@
 import { useState } from 'react'
 import { useContractorsStore } from '../store/contractors'
-import { PROXY_URL } from '../utils/api'
 import '../styles/pages.css'
 
 export function ContractorsPage() {
-  const { contractors, add, remove } = useContractorsStore()
+  const { contractors, add, remove, syncFromBank } = useContractorsStore()
   const [showForm, setShowForm] = useState(false)
   const [search, setSearch] = useState('')
   const [form, setForm] = useState({ name: '', account: '', bank: '', bic: '', inn: '', email: '' })
@@ -15,22 +14,8 @@ export function ContractorsPage() {
     setSyncing(true)
     setSyncMsg('')
     try {
-      const res = await fetch(`${PROXY_URL}/api/templates`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      const list: any[] = Array.isArray(data) ? data : (data.data ?? [])
-      let added = 0
-      for (const t of list) {
-        const name = t.name ?? t.recipientName ?? ''
-        const account = t.account ?? t.recipientAccount ?? ''
-        if (!name || !account) continue
-        const exists = contractors.some(c => c.account === account)
-        if (!exists) {
-          add({ name, account, bank: t.bank ?? '', bic: t.bic ?? '', inn: t.inn ?? '', email: '' })
-          added++
-        }
-      }
-      setSyncMsg(added > 0 ? `Добавлено ${added} контрагентов из банка` : 'Все контрагенты уже актуальны')
+      await syncFromBank()
+      setSyncMsg(`Синхронизация завершена. Контрагентов: ${useContractorsStore.getState().contractors.length}`)
     } catch (e) {
       setSyncMsg('Не удалось синхронизировать: ' + (e instanceof Error ? e.message : 'ошибка'))
     } finally {
