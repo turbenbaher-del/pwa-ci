@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAccountsStore } from '../store/accounts'
+import { PROXY_URL } from '../utils/api'
 import '../styles/pages.css'
 
 export function StatementsPage() {
@@ -9,16 +10,34 @@ export function StatementsPage() {
   const [dateTo, setDateTo] = useState(new Date().toISOString().split('T')[0])
   const [fmt, setFmt] = useState('pdf')
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
 
   const handleExport = async () => {
     setLoading(true)
-    setMessage('')
+    setError('')
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      setMessage(`Выписка за ${dateFrom} — ${dateTo} выгружена в формате ${fmt.toUpperCase()}`)
-    } catch {
-      setMessage('Ошибка при формировании выписки')
+      const params = new URLSearchParams({ dateFrom, dateTo, format: fmt })
+      if (account) params.set('account', account)
+      const res = await fetch(`${PROXY_URL}/api/statement?${params}`)
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        throw new Error(json.error || `Ошибка ${res.status}`)
+      }
+      const blob = await res.blob()
+      const ext = fmt === '1c' ? 'txt' : fmt
+      const disposition = res.headers.get('Content-Disposition') || ''
+      const nameMatch = disposition.match(/filename\*?=(?:UTF-8'')?([^;]+)/i)
+      const filename = nameMatch
+        ? decodeURIComponent(nameMatch[1].replace(/"/g, ''))
+        : `выписка_${dateFrom}_${dateTo}.${ext}`
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ошибка при скачивании выписки')
     } finally {
       setLoading(false)
     }
@@ -72,9 +91,9 @@ export function StatementsPage() {
             </select>
           </div>
 
-          {message && (
-            <div className={`alert ${message.includes('Ошибка') ? 'alert-error' : 'alert-success'}`} style={{ marginBottom: '1rem' }}>
-              {message}
+          {error && (
+            <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>
+              {error}
             </div>
           )}
 
@@ -88,6 +107,11 @@ export function StatementsPage() {
             )}
             {loading ? 'Формирование...' : 'Скачать выписку'}
           </button>
+          {loading && (
+            <p style={{ marginTop: '0.75rem', fontSize: 'var(--text-sm)', color: 'var(--color-text-secondary)', textAlign: 'center' }}>
+              Прокси заходит в банк и скачивает файл — это может занять до 30 секунд
+            </p>
+          )}
         </div>
 
         <div className="section" style={{ marginTop: '1rem' }}>
