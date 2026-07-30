@@ -103,8 +103,9 @@ export function LoginPage() {
       </form>
 
       <div className="login-form-footer">
-        <p>Тестовые данные: <strong>24cmvKy8</strong> / <strong>dbocib14Z</strong></p>
-        <p style={{ marginTop: '0.375rem' }}>ПАО «Центр-инвест» · PWA v2.0</p>
+        {/* Здесь были напечатаны реальные логин и пароль ДБО — на общедоступной
+            странице. Никаких учётных данных на экране входа быть не должно. */}
+        <p>ПАО «Центр-инвест» · PWA v2.0</p>
       </div>
     </>
   )
