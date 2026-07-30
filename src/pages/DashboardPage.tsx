@@ -3,7 +3,13 @@ import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { usePaymentsStore } from '../store/payments'
 import { useAccountsStore } from '../store/accounts'
-import { formatCurrency, getFirstName } from '../utils/format'
+import {
+  formatCurrency,
+  getGreetingName,
+  isAccountOpen,
+  accountStatusLabel,
+  sumRubleBalance,
+} from '../utils/format'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import '../styles/pages.css'
@@ -18,8 +24,9 @@ export function DashboardPage() {
     fetchAccounts()
   }, [fetchPayments, fetchAccounts])
 
-  const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0)
-  const openAccounts = accounts.filter(a => a.status === 'Открыт')
+  // Складываем только рубли: валютные остатки без курса суммировать нельзя
+  const totalBalance = sumRubleBalance(accounts)
+  const openAccounts = accounts.filter(a => isAccountOpen(a.status))
   const totalIncoming = payments.filter(p => p.amount > 0).reduce((s, p) => s + p.amount, 0)
   const totalOutgoing = payments.filter(p => p.amount < 0).reduce((s, p) => s + Math.abs(p.amount), 0)
 
@@ -28,7 +35,7 @@ export function DashboardPage() {
   return (
     <div className="page">
       <div className="page-header">
-        <h1 className="page-title">Добро пожаловать, {user?.name ? getFirstName(user.name) : ''}!</h1>
+        <h1 className="page-title">Добро пожаловать, {getGreetingName(user?.name)}!</h1>
         <p className="page-subtitle" style={{ textTransform: 'capitalize' }}>{today}</p>
       </div>
 
@@ -44,7 +51,7 @@ export function DashboardPage() {
           <div className="kpi-card-value">
             {accountsLoading ? '...' : formatCurrency(totalBalance)}
           </div>
-          <div className="kpi-card-meta">По всем счетам (RUR)</div>
+          <div className="kpi-card-meta">По рублёвым счетам</div>
         </div>
 
         <div className="kpi-card">
@@ -55,7 +62,7 @@ export function DashboardPage() {
             </svg>
           </div>
           <div className="kpi-card-label">Поступления</div>
-          <div className="kpi-card-value" style={{ fontSize: '1rem' }}>
+          <div className="kpi-card-value">
             {payments.length > 0 ? formatCurrency(totalIncoming) : '—'}
           </div>
           <div className="kpi-card-meta">За период</div>
@@ -69,7 +76,7 @@ export function DashboardPage() {
             </svg>
           </div>
           <div className="kpi-card-label">Списания</div>
-          <div className="kpi-card-value" style={{ fontSize: '1rem' }}>
+          <div className="kpi-card-value">
             {payments.length > 0 ? formatCurrency(totalOutgoing) : '—'}
           </div>
           <div className="kpi-card-meta">За период</div>
@@ -107,10 +114,10 @@ export function DashboardPage() {
                     <div className="tx-name" style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
                       {acc.number.replace(/(\d{5})(\d{3})(\d)(\d{11})/, '$1.$2.$3.$4')}
                     </div>
-                    <div className="tx-desc">{acc.status}</div>
+                    <div className="tx-desc">{accountStatusLabel(acc.status)}</div>
                   </div>
                   <div className="tx-right">
-                    <div className="tx-amount">{formatCurrency(acc.balance)}</div>
+                    <div className="tx-amount">{formatCurrency(acc.balance, acc.currency)}</div>
                     <div className="tx-date">{acc.currency}</div>
                   </div>
                 </div>
@@ -136,6 +143,18 @@ export function DashboardPage() {
                 </svg>
               </div>
               <span className="quick-action-label">Новый платеж</span>
+            </Link>
+
+            <Link to="/transfer" className="quick-action">
+              <div className="quick-action-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                </svg>
+              </div>
+              <span className="quick-action-label">Между счетами</span>
             </Link>
 
             <Link to="/statements" className="quick-action">

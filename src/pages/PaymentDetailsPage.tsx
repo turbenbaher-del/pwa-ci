@@ -3,7 +3,7 @@ import { usePaymentsStore } from '../store/payments'
 import { formatCurrency } from '../utils/format'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import '../styles/pages.css'
 
 const cardStyle = {
@@ -21,32 +21,45 @@ const fieldValue = { fontWeight: 500, fontSize: 'var(--text-sm)', color: 'var(--
 export function PaymentDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getPaymentById, signPayment } = usePaymentsStore()
+  const { getPaymentById, fetchPaymentById, signPayment, isLocalDraft } = usePaymentsStore()
   const [showSignForm, setShowSignForm] = useState(false)
-  const [twoFactorCode, setTwoFactorCode] = useState('')
   const [signMsg, setSignMsg] = useState('')
   const [signing, setSigning] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const payment = id ? getPaymentById(id) : undefined
+
+  // Прямое открытие ссылки на платёж: стор пуст, догружаем операцию из банка
+  useEffect(() => {
+    if (!id || payment) return
+    setLoading(true)
+    fetchPaymentById(id).finally(() => setLoading(false))
+  }, [id, payment, fetchPaymentById])
 
   if (!payment) {
     return (
       <div className="page">
-        <div className="alert alert-error">Платёж не найден</div>
+        {loading
+          ? <div className="an-empty"><span className="spinner" /> Загружаем платёж…</div>
+          : <div className="alert alert-error">Платёж не найден</div>}
       </div>
     )
   }
 
+  // Подписать можно только черновик из приложения: операции из выписки банка
+  // уже проведены и идентификатора документа в ДБО у них нет.
+  const canSign = isLocalDraft(payment.id)
+
   const handleSign = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (twoFactorCode.length !== 6) { setSignMsg('Введите 6-значный код'); return }
     setSigning(true)
     try {
-      await signPayment(payment.id, 'signature_placeholder', twoFactorCode)
+      await signPayment(payment.id)
       setShowSignForm(false)
-      setSignMsg('Платёж подписан')
-    } catch {
-      setSignMsg('Ошибка при подписании')
+      setSignMsg('Платёж отправлен в банк на исполнение')
+    } catch (e) {
+      // Показываем причину от банка/прокси, а не общее «Ошибка»
+      setSignMsg(e instanceof Error ? e.message : 'Ошибка при подписании')
     } finally {
       setSigning(false)
     }
@@ -141,35 +154,27 @@ export function PaymentDetailsPage() {
           </div>
         )}
 
-        {/* Sign form */}
-        {payment.status === 'created' && (
+        {/* Отправка на исполнение — только для черновика, созданного здесь */}
+        {canSign && payment.status !== 'sent' && payment.status !== 'executed' && (
           <div style={{ ...cardStyle, border: '1px solid rgba(254,114,0,0.3)', background: 'rgba(254,114,0,0.04)' }}>
+            {signMsg && <div className="alert alert-info" style={{ marginBottom: '1rem' }}>{signMsg}</div>}
             {!showSignForm ? (
               <button onClick={() => setShowSignForm(true)} className="btn btn-primary btn-block">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
                 </svg>
-                Подписать платёж
+                Подписать и отправить в банк
               </button>
             ) : (
               <form onSubmit={handleSign}>
-                {signMsg && <div className="alert alert-error" style={{ marginBottom: '1rem' }}>{signMsg}</div>}
-                <div className="form-group">
-                  <label>Код подтверждения (2FA)</label>
-                  <input
-                    type="text"
-                    value={twoFactorCode}
-                    onChange={e => setTwoFactorCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="000000"
-                    maxLength={6}
-                    autoFocus
-                    disabled={signing}
-                  />
-                  <div className="form-hint">Введите 6-значный код из SMS</div>
+                <div className="alert alert-warning" style={{ marginBottom: '1rem' }}>
+                  Платёж на {formatCurrency(Math.abs(payment.amount), payment.currency)} будет отправлен
+                  в банк на исполнение — деньги спишутся со счёта. Подтверждение подписи
+                  запросит сам банк.
                 </div>
                 <div className="flex" style={{ gap: '0.75rem' }}>
                   <button type="submit" className="btn btn-primary flex-1" disabled={signing}>
-                    {signing ? <span className="spinner" /> : null} Подписать
+                    {signing ? <span className="spinner" /> : null} Отправить
                   </button>
                   <button type="button" onClick={() => setShowSignForm(false)} className="btn btn-secondary flex-1" disabled={signing}>
                     Отмена
@@ -177,6 +182,18 @@ export function PaymentDetailsPage() {
                 </div>
               </form>
             )}
+          </div>
+        )}
+
+        {/* Документ ждёт подписи, но пришёл из ДБО — подписать его отсюда нельзя */}
+        {!canSign && payment.status === 'created' && (
+          <div style={{ ...cardStyle, border: '1px solid rgba(254,114,0,0.3)', background: 'rgba(254,114,0,0.04)' }}>
+            <div style={{ ...fieldLabel, marginBottom: 6 }}>Ожидает подписи</div>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>
+              Документ создан в ДБО. Подписать его из приложения нельзя: банк отдаёт такие
+              документы только как строки выписки, без идентификатора для подписания.
+              Подпишите его в веб-версии ДБО.
+            </p>
           </div>
         )}
 

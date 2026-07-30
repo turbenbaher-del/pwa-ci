@@ -27,6 +27,11 @@ jobs:
 
     - name: Build
       run: npm run build
+      env:
+        # Адрес прокси и токен доступа к нему подставляются из секретов репозитория,
+        # чтобы не держать их в коде. Задать: Settings → Secrets and variables → Actions.
+        VITE_PROXY_URL: ${{ secrets.VITE_PROXY_URL }}
+        VITE_PROXY_TOKEN: ${{ secrets.VITE_PROXY_TOKEN }}
 
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3

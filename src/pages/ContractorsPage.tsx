@@ -15,7 +15,12 @@ export function ContractorsPage() {
     setSyncMsg('')
     try {
       await syncFromBank()
-      setSyncMsg(`Синхронизация завершена. Контрагентов: ${useContractorsStore.getState().contractors.length}`)
+      // syncFromBank не бросает исключение, а записывает причину в syncError —
+      // иначе неудачная синхронизация рапортовала об успехе
+      const { contractors: list, syncError } = useContractorsStore.getState()
+      setSyncMsg(syncError
+        ? 'Не удалось синхронизировать: ' + syncError
+        : `Синхронизация завершена. Контрагентов: ${list.length}`)
     } catch (e) {
       setSyncMsg('Не удалось синхронизировать: ' + (e instanceof Error ? e.message : 'ошибка'))
     } finally {

@@ -14,3 +14,9 @@ yarn-error.log*
 *~
 .firebase/
 .firebaserc
+
+# рабочие скриншоты и проверки
+.review/
+
+# служебные worktree агентов
+.claude/worktrees/

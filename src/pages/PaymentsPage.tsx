@@ -6,27 +6,62 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import '../styles/pages.css'
 
+// Фильтры статусов — как в веб-ДБО: Все, Выполненные, Черновики, На подпись,
+// В обработке, Отклонённые.
+const STATUS_FILTERS: { key: string; label: string }[] = [
+  { key: '',          label: 'Все' },
+  { key: 'executed',  label: 'Выполненные' },
+  { key: 'draft',     label: 'Черновики' },
+  { key: 'created',   label: 'На подпись' },
+  { key: 'sent',      label: 'В обработке' },
+  { key: 'rejected',  label: 'Отклонённые' },
+]
+
+// Направление операции — тоже отдельный фильтр в ДБО
+const DIRECTION_FILTERS: { key: string; label: string }[] = [
+  { key: '',    label: 'Все операции' },
+  { key: 'in',  label: 'Приход' },
+  { key: 'out', label: 'Расход' },
+]
+
 export function PaymentsPage() {
   const { payments, fetchPayments, loading } = usePaymentsStore()
   const [statusFilter, setStatusFilter] = useState('')
+  const [directionFilter, setDirectionFilter] = useState('')
   const [search, setSearch] = useState('')
 
   useEffect(() => {
     fetchPayments()
   }, [fetchPayments])
 
+  const isIncoming = (p: typeof payments[number]) => p.direction === 'in' || p.amount > 0
+
+  const matchesSearch = (p: typeof payments[number]) => {
+    if (!search) return true
+    const q = search.toLowerCase()
+    return (
+      p.recipient.name.toLowerCase().includes(q) ||
+      (p.purpose ?? '').toLowerCase().includes(q) ||
+      p.recipient.account.includes(q) ||
+      (p.number ?? '').includes(q)
+    )
+  }
+
   const filteredPayments = payments.filter(p => {
     if (statusFilter && p.status !== statusFilter) return false
-    if (search) {
-      const q = search.toLowerCase()
-      return (
-        p.recipient.name.toLowerCase().includes(q) ||
-        (p.purpose ?? '').toLowerCase().includes(q) ||
-        p.recipient.account.includes(q)
-      )
-    }
-    return true
+    if (directionFilter === 'in' && !isIncoming(p)) return false
+    if (directionFilter === 'out' && isIncoming(p)) return false
+    return matchesSearch(p)
   })
+
+  // Счётчики на чипах: сразу видно, есть ли документы на подпись
+  const statusCount = (key: string) =>
+    payments.filter(p => {
+      if (key && p.status !== key) return false
+      if (directionFilter === 'in' && !isIncoming(p)) return false
+      if (directionFilter === 'out' && isIncoming(p)) return false
+      return matchesSearch(p)
+    }).length
 
   return (
     <div className="page">
@@ -47,13 +82,28 @@ export function PaymentsPage() {
       {/* Toolbar */}
       <div className="payments-toolbar">
         <div className="payments-toolbar-left">
-          {(['', 'draft', 'created', 'signed', 'sent', 'executed', 'rejected'] as const).map((s) => (
+          {STATUS_FILTERS.map(({ key, label }) => {
+            const count = statusCount(key)
+            return (
+              <button
+                key={key}
+                className={`filter-chip ${statusFilter === key ? 'active' : ''}`}
+                onClick={() => setStatusFilter(key)}
+              >
+                {label}
+                {count > 0 && <span className="filter-chip-count">{count}</span>}
+              </button>
+            )
+          })}
+        </div>
+        <div className="payments-toolbar-left">
+          {DIRECTION_FILTERS.map(({ key, label }) => (
             <button
-              key={s}
-              className={`filter-chip ${statusFilter === s ? 'active' : ''}`}
-              onClick={() => setStatusFilter(s)}
+              key={key}
+              className={`filter-chip ${directionFilter === key ? 'active' : ''}`}
+              onClick={() => setDirectionFilter(key)}
             >
-              {s === '' ? 'Все' : getStatusLabel(s)}
+              {label}
             </button>
           ))}
         </div>

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { PROXY_URL } from '../utils/api'
+import { apiFetch } from '../utils/api'
 
 export interface Contractor {
   id: string
@@ -15,6 +15,8 @@ export interface Contractor {
 interface ContractorsState {
   contractors: Contractor[]
   syncing: boolean
+  /** Причина неудачной синхронизации — раньше ошибка уходила только в консоль */
+  syncError: string | null
   lastSynced: number | null
   add: (c: Omit<Contractor, 'id'>) => void
   remove: (id: string) => void
@@ -27,6 +29,7 @@ export const useContractorsStore = create<ContractorsState>()(
     (set, get) => ({
       contractors: [],
       syncing: false,
+      syncError: null,
       lastSynced: null,
 
       add: (c) => set((s) => ({ contractors: [...s.contractors, { ...c, id: Date.now().toString() }] })),
@@ -36,35 +39,55 @@ export const useContractorsStore = create<ContractorsState>()(
       })),
 
       syncFromBank: async () => {
-        set({ syncing: true })
+        set({ syncing: true, syncError: null })
         try {
-          const res = await fetch(`${PROXY_URL}/api/contractors`)
-          if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const json = await res.json()
-          const incoming: Contractor[] = json.data ?? []
-          if (incoming.length === 0) return
+          // Два источника из ДБО:
+          //  /api/contractors — контрагенты, выведенные из истории операций (есть имена, реквизитов обычно нет)
+          //  /api/templates   — справочник «Корреспонденты» банка (есть счёт и БИК)
+          // Второй точнее, поэтому его данные имеют приоритет при заполнении реквизитов.
+          const [history, directory] = await Promise.all([
+            apiFetch('/api/contractors').catch(() => ({ data: [] })),
+            apiFetch('/api/templates').catch(() => ({ data: [] })),
+          ])
 
-          // Merge: keep manually-added contractors, update/add bank ones
-          const existing = get().contractors
-          const merged = [...existing]
+          const incoming: Contractor[] = [
+            ...(directory.data ?? []),
+            ...(history.data ?? []),
+          ]
+          if (incoming.length === 0) {
+            set({ syncError: 'Банк не вернул контрагентов' })
+            return
+          }
+
+          // Сопоставляем по счёту, а если его нет — по имени.
+          const sameContractor = (a: Contractor, b: Contractor) => {
+            const accA = (a.account || '').replace(/\D/g, '')
+            const accB = (b.account || '').replace(/\D/g, '')
+            if (accA && accB) return accA === accB
+            return a.name.trim().toLowerCase() === b.name.trim().toLowerCase()
+          }
+
+          const merged = [...get().contractors]
           for (const c of incoming) {
-            const idx = merged.findIndex(e => e.name === c.name || e.id === c.id)
+            const idx = merged.findIndex(e => sameContractor(e, c))
             if (idx >= 0) {
-              // Update with bank data but preserve user edits
+              // Правки пользователя не затираем, но пустые поля дозаполняем данными банка
               merged[idx] = {
                 ...merged[idx],
-                account: merged[idx].account || c.account,
-                bic:     merged[idx].bic     || c.bic,
-                bank:    merged[idx].bank    || c.bank,
+                account: merged[idx].account || c.account || '',
+                bic:     merged[idx].bic     || c.bic     || '',
+                bank:    merged[idx].bank    || c.bank    || '',
                 inn:     merged[idx].inn     || c.inn,
               }
             } else {
-              merged.push({ ...c, id: c.id || Date.now().toString() + Math.random() })
+              merged.push({ ...c, id: c.id || `bank_${(c.account || c.name).replace(/\s/g, '')}` })
             }
           }
           set({ contractors: merged, lastSynced: Date.now() })
         } catch (e) {
+          const message = e instanceof Error ? e.message : 'Не удалось синхронизировать контрагентов'
           console.error('[contractors] sync failed:', e)
+          set({ syncError: message })
         } finally {
           set({ syncing: false })
         }

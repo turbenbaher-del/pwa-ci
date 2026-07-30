@@ -2,49 +2,60 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="ДБО Центр-инвест - Progressive Web App для управления банковскими операциями">
-  <meta name="theme-color" content="#1e40af">
+  <!-- viewport-fit=cover обязателен, иначе env(safe-area-inset-*) на iPhone всегда 0 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="ДБО Центр-инвест — интернет-банк для бизнеса: счета, платежи, выписки">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- Цвет системной строки: брендовый зелёный (Брендбук v1.0.1) -->
+  <meta name="theme-color" content="#50B848">
+
+  <!-- iOS: standalone-режим, заголовок на домашнем экране, статус-бар -->
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Центр-инвест">
 
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" type="image/svg+xml" href="/vite.svg">
-  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+
+  <!-- Splash-экраны iOS: без них запуск с домашнего экрана даёт белую вспышку -->
+  <link rel="apple-touch-startup-image" href="/splash-1290x2796.png"
+        media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/splash-1179x2556.png"
+        media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/splash-1170x2532.png"
+        media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/splash-1125x2436.png"
+        media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/splash-750x1334.png"
+        media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+
+  <!-- Шрифты брендбука: Montserrat (заголовки) + Roboto (текст) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
   <title>ДБО Центр-инвест</title>
 
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    /* Критический минимум до загрузки основного CSS — чтобы не мигало не-брендовыми цветами */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html, body, #root {
-      width: 100%;
-      height: 100%;
-    }
+    html, body, #root { width: 100%; height: 100%; }
+
+    /* Фон тянем и на html — иначе в standalone под системными областями белые полосы */
+    html { background-color: #F4FDFB; }
 
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
-      background-color: #f8fafc;
-      color: #1e293b;
-    }
-
-    @supports (padding: max(0px)) {
-      body {
-        padding-left: max(1.5rem, env(safe-area-inset-left));
-        padding-right: max(1.5rem, env(safe-area-inset-right));
-        padding-top: max(1rem, env(safe-area-inset-top));
-        padding-bottom: max(1rem, env(safe-area-inset-bottom));
-      }
+      background-color: #F4FDFB;
+      color: #0E100F;
+      /* Общих паддингов нет: safe-area учитывается точечно — в шапке и нижней навигации */
+      overscroll-behavior-y: none;
     }
   </style>
 </head>

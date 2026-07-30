@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { PROXY_URL } from '../utils/api'
+import { apiFetch } from '../utils/api'
+import { setDemo, demoContractors } from '../utils/demo'
+import { useContractorsStore } from './contractors'
 
 export interface User {
   id: string
@@ -18,6 +20,7 @@ export interface AuthState {
   user: User | null
   token: string | null
   login: (login: string, password: string) => Promise<void>
+  loginDemo: () => void
   logout: () => void
   updateUser: (user: Partial<User>) => void
 }
@@ -30,13 +33,12 @@ export const useAuthStore = create<AuthState>()(
       token: null,
 
       login: async (login: string, password: string) => {
-        const res = await fetch(`${PROXY_URL}/api/login`, {
+        setDemo(false)  // реальный вход выключает демо-режим
+        const data = await apiFetch('/api/login', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ login, password }),
         })
-        const data = await res.json()
-        if (!res.ok || !data.success) {
+        if (!data.success) {
           throw new Error(data.error || 'Неверные учетные данные')
         }
 
@@ -51,8 +53,24 @@ export const useAuthStore = create<AuthState>()(
         set({ isAuthenticated: true, user, token: 'proxy-token-' + Date.now() })
       },
 
+      loginDemo: () => {
+        setDemo(true)
+        const user: User = {
+          id: 'demo',
+          login: 'demo',
+          name: 'Демо-компания ООО',
+          role: 'user',
+          permissions: ['payments.view', 'payments.create', 'payments.sign'],
+          lastLogin: new Date(),
+        }
+        // seed demo contractors so the payment form's picker works
+        useContractorsStore.setState({ contractors: demoContractors })
+        set({ isAuthenticated: true, user, token: 'demo-token' })
+      },
+
       logout: () => {
-        fetch(`${PROXY_URL}/api/logout`, { method: 'POST' }).catch(() => {})
+        setDemo(false)
+        apiFetch('/api/logout', { method: 'POST' }).catch(() => {})
         set({ isAuthenticated: false, user: null, token: null })
       },
 

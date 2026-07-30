@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { apiFetch } from '../utils/api'
+import { isDemo, demoAccounts } from '../utils/demo'
 
 export interface Account {
   number: string
@@ -21,6 +22,7 @@ export const useAccountsStore = create<AccountsState>((set) => ({
   error: null,
 
   fetchAccounts: async () => {
+    if (isDemo()) { set({ accounts: demoAccounts, loading: false, error: null }); return }
     set({ loading: true, error: null })
     try {
       const data = await apiFetch('/api/accounts')

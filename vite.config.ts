@@ -2,8 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Базовый путь деплоя. На GitHub Pages это подпапка /pwa-ci/, на своём домене — '/'.
+// scope и start_url манифеста ОБЯЗАНЫ совпадать с base, иначе установка PWA не работает.
+const BASE = process.env.VITE_BASE || '/pwa-ci/'
+
 export default defineConfig({
-  base: '/pwa-ci/',
+  base: BASE,
   plugins: [
     react(),
     VitePWA({
@@ -11,67 +15,89 @@ export default defineConfig({
       manifest: {
         name: 'ДБО Центр-инвест',
         short_name: 'Центр-инвест',
-        description: 'Progressive Web App для управления банковскими операциями',
-        theme_color: '#1e40af',
-        background_color: '#ffffff',
+        description: 'Интернет-банк для бизнеса: счета, платежи, выписки',
+        lang: 'ru',
+        dir: 'ltr',
+        // Цвета из брендбука v1.0.1
+        theme_color: '#50B848',
+        background_color: '#FFFFFF',
         display: 'standalone',
-        scope: '/',
-        start_url: '/',
+        scope: BASE,
+        start_url: BASE,
         orientation: 'portrait-primary',
+        // Пути относительные — резолвятся от расположения манифеста, работает и в подпапке
         icons: [
           {
-            src: '/icon-192.png',
+            src: 'icon-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/icon-512.png',
+            src: 'icon-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/icon-maskable-192.png',
+            src: 'icon-maskable-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'maskable'
           },
           {
-            src: '/icon-maskable-512.png',
+            src: 'icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
           }
         ],
-        categories: ['finance', 'banking'],
+        categories: ['finance', 'business'],
+        // Без screenshots Chrome показывает урезанное окно установки.
+        // Файлы генерирует scripts/gen-screenshots.mjs.
         screenshots: [
           {
-            src: '/screenshot-mobile.png',
-            sizes: '540x720',
+            src: 'screenshot-mobile.png',
+            sizes: '786x1704',
             type: 'image/png',
-            form_factor: 'narrow'
+            form_factor: 'narrow',
+            label: 'Главный экран: счета и последние операции'
           },
           {
-            src: '/screenshot-desktop.png',
+            src: 'screenshot-desktop.png',
             sizes: '1280x720',
             type: 'image/png',
-            form_factor: 'wide'
+            form_factor: 'wide',
+            label: 'ДБО Центр-инвест на большом экране'
           }
+        ],
+        // Быстрые действия по долгому нажатию на иконку (Android)
+        shortcuts: [
+          { name: 'Новый платёж',  short_name: 'Платёж',   url: 'payments/create' },
+          { name: 'Счета',         short_name: 'Счета',    url: 'accounts' },
+          { name: 'Выписка',       short_name: 'Выписка',  url: 'statements' }
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        // Deep-link'и SPA (/payments/123) отдаём из index.html
+        navigateFallback: `${BASE}index.html`,
+        navigateFallbackDenylist: [/^\/api\//],
         runtimeCaching: [
           {
-            urlPattern: /^https:\/\/api\.centrinvest\.ru\/.*/i,
+            // Данные банка идут через прокси. Кэшируем только чтение и ненадолго:
+            // офлайн покажем последние известные счета/платежи, но не устаревшие сутками.
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' && /\/api\/(accounts|payments|contractors|tariffs|templates)/.test(url.pathname),
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'dbo-api-cache',
+              networkTimeoutSeconds: 10,
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 300
-              }
+              },
+              cacheableResponse: { statuses: [200] }
             }
           },
           {

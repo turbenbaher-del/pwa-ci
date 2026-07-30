@@ -4,19 +4,41 @@ import { usePaymentsStore } from '../store/payments'
 import { useAccountsStore } from '../store/accounts'
 import { useAuthStore } from '../store/auth'
 import { useContractorsStore } from '../store/contractors'
+import { useTemplatesStore, type PaymentTemplate } from '../store/templates'
+import { confirm } from '../store/confirm'
 import '../styles/pages.css'
+
+// Центр-Инвест БИК — платёж внутри банка идёт без комиссии.
+const CI_BIC = '046015207'
+
+// Лёгкая ОЦЕНКА комиссии (не заменяет расчёт банка при подписании).
+function estimateCommission(amount: number, bic: string, currency: string): string {
+  if (!amount || amount <= 0) return ''
+  if (currency !== 'RUB') return 'по тарифу ВЭД (уточняется при подписании)'
+  const clean = (bic || '').replace(/\D/g, '')
+  if (clean && clean === CI_BIC) return 'без комиссии (платёж внутри банка)'
+  const fee = Math.min(Math.max(amount * 0.001, 25), 150) // ~0.1%, 25–150 ₽ (оценка)
+  return `≈ ${new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(fee)} · межбанковский`
+}
 
 export function CreatePaymentPage() {
   const navigate = useNavigate()
   const { createPayment, error, clearError } = usePaymentsStore()
   const { accounts, fetchAccounts } = useAccountsStore()
   const { contractors } = useContractorsStore()
+  const { templates, addTemplate, removeTemplate, touchTemplate } = useTemplatesStore()
   const user = useAuthStore(s => s.user)
   const [loading, setLoading] = useState(false)
   const [formError, setFormError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)   // прогрессивное раскрытие (из Т)
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    payerAccount: string; amount: string; currency: string; date: string
+    recipientName: string; recipientAccount: string; recipientBank: string; recipientBic: string
+    recipientInn: string; recipientKpp: string
+    purpose: string; priority: 'normal' | 'urgent'; commissionPayment: 'payer' | 'recipient'
+  }>({
     payerAccount:      '',
     amount:            '',
     currency:          'RUB',
@@ -25,9 +47,11 @@ export function CreatePaymentPage() {
     recipientAccount:  '',
     recipientBank:     '',
     recipientBic:      '',
+    recipientInn:      '',
+    recipientKpp:      '',
     purpose:           '',
-    priority:          'normal' as const,
-    commissionPayment: 'payer' as const,
+    priority:          'normal',
+    commissionPayment: 'payer',
   })
 
   useEffect(() => {
@@ -48,6 +72,49 @@ export function CreatePaymentPage() {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
   }
+
+  // ——— Шаблоны платежей (перенос из Т: favorites/шаблоны) ———
+  const applyTemplate = (t: PaymentTemplate) => {
+    setFormData(prev => ({
+      ...prev,
+      recipientName:     t.recipientName,
+      recipientAccount:  t.recipientAccount,
+      recipientBank:     t.recipientBank,
+      recipientBic:      t.recipientBic,
+      purpose:           t.purpose,
+      amount:            t.amount || prev.amount,
+      currency:          t.currency,
+      priority:          t.priority,
+      commissionPayment: t.commissionPayment,
+    }))
+    touchTemplate(t.id)
+    setFormError(''); setSuccessMsg('')
+  }
+
+  const saveAsTemplate = () => {
+    if (!formData.recipientName.trim() || !formData.recipientAccount.trim()) {
+      setFormError('Заполните получателя, чтобы сохранить шаблон')
+      return
+    }
+    const suggested = formData.recipientName.slice(0, 40)
+    const name = window.prompt('Название шаблона:', suggested)
+    if (!name) return
+    addTemplate({
+      name,
+      recipientName:     formData.recipientName,
+      recipientAccount:  formData.recipientAccount,
+      recipientBank:     formData.recipientBank,
+      recipientBic:      formData.recipientBic,
+      purpose:           formData.purpose,
+      amount:            formData.amount || undefined,
+      currency:          formData.currency,
+      priority:          formData.priority,
+      commissionPayment: formData.commissionPayment,
+    })
+    setSuccessMsg(`Шаблон «${name}» сохранён`)
+  }
+
+  const commissionHint = estimateCommission(parseFloat(formData.amount), formData.recipientBic, formData.currency)
 
   const validate = (): boolean => {
     if (!formData.amount || isNaN(parseFloat(formData.amount)) || parseFloat(formData.amount) <= 0) {
@@ -79,6 +146,22 @@ export function CreatePaymentPage() {
     clearError()
     if (!validate()) return
 
+    // Единый confirmation/подпись (перенос из Т: requestConfirmation → sign)
+    const amountFmt = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: formData.currency }).format(parseFloat(formData.amount))
+    const res = await confirm({
+      title: 'Подписание платежа',
+      message: 'Проверьте реквизиты и подтвердите операцию кодом из SMS.',
+      details: [
+        { label: 'Получатель', value: formData.recipientName },
+        { label: 'Счёт', value: formData.recipientAccount },
+        { label: 'Сумма', value: amountFmt },
+        { label: 'Назначение', value: formData.purpose.slice(0, 60) + (formData.purpose.length > 60 ? '…' : '') },
+      ],
+      requireCode: true,
+      confirmLabel: 'Подписать и отправить',
+    })
+    if (!res.ok) return
+
     setLoading(true)
     setSuccessMsg('')
     try {
@@ -93,6 +176,8 @@ export function CreatePaymentPage() {
           account: formData.recipientAccount.replace(/\s/g, ''),
           bank:    formData.recipientBank,
           bic:     formData.recipientBic.replace(/\D/g, ''),
+          inn:     formData.recipientInn.replace(/\D/g, ''),
+          kpp:     formData.recipientKpp.replace(/\D/g, ''),
         },
         payer: {
           name:    user?.name ?? 'Организация',
@@ -146,6 +231,23 @@ export function CreatePaymentPage() {
         )}
 
         <form onSubmit={handleSubmit}>
+          {/* Templates bar (ported from T «favorites/шаблоны») */}
+          {templates.length > 0 && (
+            <div className="form-section">
+              <div className="form-section-title">Шаблоны</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                {templates.map(t => (
+                  <span key={t.id} className="tpl-chip">
+                    <button type="button" className="tpl-chip-apply" onClick={() => applyTemplate(t)} disabled={loading} title="Подставить шаблон">
+                      {t.name}
+                    </button>
+                    <button type="button" className="tpl-chip-del" onClick={() => removeTemplate(t.id)} disabled={loading} title="Удалить шаблон" aria-label="Удалить">×</button>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Payer section */}
           <div className="form-section">
             <div className="form-section-title">Плательщик</div>
@@ -187,6 +289,8 @@ export function CreatePaymentPage() {
                       recipientAccount: c.account,
                       recipientBic: c.bic ?? '',
                       recipientBank: c.bank ?? '',
+                      recipientInn: (c as any).inn ?? '',
+                      recipientKpp: (c as any).kpp ?? '',
                     }))
                   }}
                   disabled={loading}
@@ -239,6 +343,34 @@ export function CreatePaymentPage() {
               </div>
             </div>
 
+            <div className="form-row">
+              <div className="form-group">
+                <label>ИНН получателя *</label>
+                <input
+                  type="text"
+                  name="recipientInn"
+                  value={formData.recipientInn}
+                  onChange={handleChange}
+                  placeholder="7710140679"
+                  maxLength={12}
+                  disabled={loading}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>КПП получателя</label>
+                <input
+                  type="text"
+                  name="recipientKpp"
+                  value={formData.recipientKpp}
+                  onChange={handleChange}
+                  placeholder="771301001"
+                  maxLength={9}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
             <div className="form-group">
               <label>Наименование банка получателя</label>
               <input
@@ -252,57 +384,28 @@ export function CreatePaymentPage() {
             </div>
           </div>
 
-          {/* Payment details */}
+          {/* Payment details — core fields only */}
           <div className="form-section">
             <div className="form-section-title">Детали платежа</div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>Сумма *</label>
-                <input
-                  type="number"
-                  name="amount"
-                  value={formData.amount}
-                  onChange={handleChange}
-                  placeholder="0.00"
-                  step="0.01"
-                  min="0.01"
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Валюта</label>
-                <select name="currency" value={formData.currency} onChange={handleChange} disabled={loading}>
-                  <option value="RUB">RUB — Российский рубль</option>
-                  <option value="USD">USD — Доллар США</option>
-                  <option value="EUR">EUR — Евро</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Дата платежа</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Приоритет</label>
-                <select name="priority" value={formData.priority} onChange={handleChange} disabled={loading}>
-                  <option value="normal">Обычный</option>
-                  <option value="urgent">Срочный</option>
-                </select>
-              </div>
-            </div>
-
             <div className="form-group">
+              <label>Сумма *</label>
+              <input
+                type="number"
+                name="amount"
+                value={formData.amount}
+                onChange={handleChange}
+                placeholder="0.00"
+                step="0.01"
+                min="0.01"
+                disabled={loading}
+              />
+              {commissionHint && (
+                <div className="field-hint">Комиссия: {commissionHint}</div>
+              )}
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Назначение платежа *</label>
               <textarea
                 name="purpose"
@@ -313,14 +416,63 @@ export function CreatePaymentPage() {
                 disabled={loading}
               />
             </div>
+          </div>
 
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Оплата комиссии</label>
-              <select name="commissionPayment" value={formData.commissionPayment} onChange={handleChange} disabled={loading}>
-                <option value="payer">Плательщик</option>
-                <option value="recipient">Получатель</option>
-              </select>
+          {/* Advanced (progressive disclosure — ported from T) */}
+          <button
+            type="button"
+            className="disclosure-toggle"
+            onClick={() => setShowAdvanced(v => !v)}
+            aria-expanded={showAdvanced}
+          >
+            <span>Дополнительные параметры</span>
+            <span className={`disclosure-caret${showAdvanced ? ' open' : ''}`}>▾</span>
+          </button>
+
+          {showAdvanced && (
+            <div className="form-section">
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Валюта</label>
+                  <select name="currency" value={formData.currency} onChange={handleChange} disabled={loading}>
+                    <option value="RUB">RUB — Российский рубль</option>
+                    <option value="USD">USD — Доллар США</option>
+                    <option value="EUR">EUR — Евро</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Дата платежа</label>
+                  <input type="date" name="date" value={formData.date} onChange={handleChange} disabled={loading} />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Приоритет</label>
+                  <select name="priority" value={formData.priority} onChange={handleChange} disabled={loading}>
+                    <option value="normal">Обычный</option>
+                    <option value="urgent">Срочный</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ marginBottom: 0 }}>
+                  <label>Оплата комиссии</label>
+                  <select name="commissionPayment" value={formData.commissionPayment} onChange={handleChange} disabled={loading}>
+                    <option value="payer">Плательщик</option>
+                    <option value="recipient">Получатель</option>
+                  </select>
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Save as template */}
+          <div style={{ marginTop: '0.75rem' }}>
+            <button type="button" className="btn btn-ghost" onClick={saveAsTemplate} disabled={loading}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
+              </svg>
+              Сохранить как шаблон
+            </button>
           </div>
 
           {/* Actions */}

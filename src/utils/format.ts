@@ -1,10 +1,47 @@
+// Банк отдаёт устаревший код RUR — в ISO-4217 и Intl это RUB.
+export function normalizeCurrency(currency?: string): string {
+  const c = (currency || 'RUB').toUpperCase()
+  return c === 'RUR' ? 'RUB' : c
+}
+
 export function formatCurrency(amount: number, currency: string = 'RUB'): string {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(amount)
+  const code = normalizeCurrency(currency)
+  try {
+    return new Intl.NumberFormat('ru-RU', {
+      style: 'currency',
+      currency: code,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount)
+  } catch {
+    // Незнакомый код валюты не должен ломать экран — показываем сумму с кодом
+    return `${new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)} ${code}`
+  }
+}
+
+/** Счёт открыт? Банк отдаёт статус по-разному: 'active', 'Открыт', 'ОТКРЫТ'. */
+export function isAccountOpen(status?: string): boolean {
+  const s = (status || '').trim().toLowerCase()
+  return s === 'active' || s === 'открыт' || s === 'действующий'
+}
+
+/** Русская подпись статуса счёта вместо сырого 'active' из API. */
+export function accountStatusLabel(status?: string): string {
+  const s = (status || '').trim().toLowerCase()
+  if (isAccountOpen(status)) return 'Открыт'
+  if (s === 'closed' || s === 'закрыт') return 'Закрыт'
+  if (s === 'blocked' || s === 'заблокирован') return 'Заблокирован'
+  return status || '—'
+}
+
+/**
+ * Суммарный остаток по рублёвым счетам.
+ * Валюты складывать нельзя: без курса это не сумма, а бессмысленное число.
+ */
+export function sumRubleBalance(accounts: { currency: string; balance: number }[]): number {
+  return accounts
+    .filter(a => normalizeCurrency(a.currency) === 'RUB')
+    .reduce((sum, a) => sum + a.balance, 0)
 }
 
 export function formatPhone(phone: string): string {
@@ -47,11 +84,16 @@ export function abbreviateName(name: string): string {
     .join('')
 }
 
-// Convert ALL-CAPS Russian name to Title Case: "ПОПЕНКОВ СЕРГЕЙ" → "Попенков Сергей"
+// Convert ALL-CAPS Russian name to Title Case: "ПОПЕНКОВ СЕРГЕЙ" → "Попенков Сергей".
+// Аббревиатуры правовых форм остаются капсом: "ООО РОМАШКА" → "ООО Ромашка", а не "Ооо Ромашка".
 export function toTitleCase(name: string): string {
   return name
     .split(' ')
-    .map(w => w.length > 0 ? w[0].toUpperCase() + w.slice(1).toLowerCase() : '')
+    .map(w => {
+      if (w.length === 0) return ''
+      if (isOrgForm(w)) return w.toUpperCase()
+      return w[0].toUpperCase() + w.slice(1).toLowerCase()
+    })
     .join(' ')
 }
 
@@ -59,4 +101,42 @@ export function toTitleCase(name: string): string {
 export function getFirstName(name: string): string {
   const parts = toTitleCase(name).split(' ')
   return parts[1] ?? parts[0] ?? name
+}
+
+// Организационно-правовые формы: по ним отличаем название компании от ФИО человека.
+// Список, а не регэксп с \b: в JS \b опирается на латинский \w, поэтому /\bООО\b/ по кириллице не срабатывает.
+const ORG_FORMS = new Set([
+  'ООО', 'ОАО', 'ЗАО', 'ПАО', 'АО', 'ИП', 'НАО', 'АНО', 'НКО',
+  'ТСЖ', 'ГУП', 'МУП', 'КФХ', 'ПК', 'СНТ', 'ФГУП', 'ОП',
+])
+
+/** Слово — это правовая форма (ООО, ИП, ПАО…)? Скобки и точки игнорируем: «(ИП)» тоже считается. */
+function isOrgForm(word: string): boolean {
+  return ORG_FORMS.has(word.replace(/[^А-ЯЁA-Z]/gi, '').toUpperCase())
+}
+
+/**
+ * Как обратиться к вошедшему.
+ * У физлица-подписанта банк отдаёт «ФАМИЛИЯ ИМЯ ОТЧЕСТВО» — здороваемся по имени.
+ * У организации имя обрезать нельзя: «Демо-компания ООО» → «Ооо» выглядело как баг.
+ */
+export function getGreetingName(name?: string): string {
+  const raw = (name || '').trim()
+  if (!raw) return ''
+
+  // Банк часто пишет ИП полной формой: «ИНДИВИДУАЛЬНЫЙ ПРЕДПРИНИМАТЕЛЬ ИВАНОВ ИВАН ИВАНОВИЧ».
+  // Отбрасываем префикс и здороваемся по имени, как с человеком.
+  const withoutIpPrefix = raw.replace(/^индивидуальн\S*\s+предпринимател\S*\s+/i, '')
+
+  const parts = withoutIpPrefix.split(/\s+/)
+
+  if (parts.some(isOrgForm) || /[«"]/.test(withoutIpPrefix)) {
+    // Юридическое название не переформатируем: любой авторегистр портит «ПАО КБ "ЦЕНТР-ИНВЕСТ"»
+    return raw
+  }
+
+  // ФИО — три слова (Фамилия Имя Отчество) или два (Фамилия Имя)
+  if (parts.length >= 2 && parts.length <= 3) return getFirstName(withoutIpPrefix)
+
+  return withoutIpPrefix === withoutIpPrefix.toUpperCase() ? toTitleCase(withoutIpPrefix) : withoutIpPrefix
 }

@@ -1,22 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
+import { usePaymentsStore } from '../store/payments'
+import {
+  useNotificationsStore,
+  buildNotifications,
+  requestNotificationPermission,
+  showSystemNotifications,
+} from '../store/notifications'
 import '../styles/pages.css'
-
-interface Notification {
-  id: string
-  title: string
-  message: string
-  type: 'info' | 'success' | 'warning' | 'danger'
-  timestamp: Date
-  read: boolean
-}
-
-const INITIAL: Notification[] = [
-  { id: '1', title: 'Платёж исполнен', message: 'Платёж ООО Поставщик на сумму 50 000 ₽ успешно исполнен банком', type: 'success', timestamp: new Date(), read: false },
-  { id: '2', title: 'Требуется подпись', message: 'Платёжное поручение №1547 ожидает вашей подписи', type: 'warning', timestamp: new Date(Date.now() - 3600000), read: false },
-  { id: '3', title: 'Плановое обслуживание', message: 'Плановые технические работы завершены. Все сервисы работают в штатном режиме.', type: 'info', timestamp: new Date(Date.now() - 86400000), read: true },
-]
 
 const TYPE_COLORS: Record<string, string> = {
   success: 'var(--color-primary)',
@@ -50,12 +43,42 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 }
 
 export function NotificationsPage() {
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL)
+  const navigate = useNavigate()
+  const { payments, fetchPayments } = usePaymentsStore()
+  const {
+    readIds, dismissedIds, systemEnabled, notifiedIds,
+    markRead, markAllRead, dismiss, setSystemEnabled, rememberNotified,
+  } = useNotificationsStore()
+  const [permission, setPermission] = useState<NotificationPermission>(
+    typeof Notification !== 'undefined' ? Notification.permission : 'denied'
+  )
+
+  useEffect(() => { fetchPayments() }, [fetchPayments])
+
+  // События выводим из операций банка, состояние «прочитано» — из локального стора
+  const notifications = useMemo(() => {
+    return buildNotifications(payments)
+      .filter(n => !dismissedIds.includes(n.id))
+      .map(n => ({ ...n, read: readIds.includes(n.id) }))
+  }, [payments, readIds, dismissedIds])
+
   const unreadCount = notifications.filter(n => !n.read).length
 
-  const markRead = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
-  const markAllRead = () => setNotifications(prev => prev.map(n => ({ ...n, read: true })))
-  const remove = (id: string) => setNotifications(prev => prev.filter(n => n.id !== id))
+  // Системные уведомления о событиях, о которых ещё не сообщали
+  useEffect(() => {
+    if (!systemEnabled || permission !== 'granted') return
+    const fresh = notifications.filter(n => !n.read && !notifiedIds.includes(n.id))
+    if (fresh.length === 0) return
+    showSystemNotifications(fresh)
+    rememberNotified(fresh.map(n => n.id))
+  }, [notifications, systemEnabled, permission, notifiedIds, rememberNotified])
+
+  const toggleSystem = async () => {
+    if (systemEnabled) { setSystemEnabled(false); return }
+    const result = await requestNotificationPermission()
+    setPermission(result)
+    setSystemEnabled(result === 'granted')
+  }
 
   return (
     <div className="page">
@@ -71,12 +94,24 @@ export function NotificationsPage() {
           </h1>
           <p className="page-subtitle">Системные оповещения и статусы операций</p>
         </div>
-        {unreadCount > 0 && (
-          <button onClick={markAllRead} className="btn btn-secondary btn-sm">
-            Прочитать все
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <button onClick={toggleSystem} className={`btn btn-sm ${systemEnabled ? 'btn-primary' : 'btn-secondary'}`}>
+            {systemEnabled ? 'Уведомления включены' : 'Включить уведомления'}
           </button>
-        )}
+          {unreadCount > 0 && (
+            <button onClick={() => markAllRead(notifications.map(n => n.id))} className="btn btn-secondary btn-sm">
+              Прочитать все
+            </button>
+          )}
+        </div>
       </div>
+
+      {permission === 'denied' && (
+        <div className="alert alert-warning" style={{ marginBottom: '1rem' }}>
+          Уведомления заблокированы в настройках браузера. Разрешите их для этого сайта,
+          чтобы получать оповещения о поступлениях и документах на подпись.
+        </div>
+      )}
 
       {notifications.length > 0 ? (
         <div className="section">
@@ -96,7 +131,15 @@ export function NotificationsPage() {
                   {TYPE_ICONS[n.type]}
                 </div>
 
-                <div className="tx-info" style={{ flex: 1 }}>
+                <div
+                  className="tx-info"
+                  style={{ flex: 1, cursor: n.link ? 'pointer' : undefined }}
+                  onClick={() => {
+                    if (!n.link) return
+                    markRead(n.id)
+                    navigate(n.link)
+                  }}
+                >
                   <div className="tx-name" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     {n.title}
                     {!n.read && (
@@ -117,7 +160,7 @@ export function NotificationsPage() {
                       </svg>
                     </button>
                   )}
-                  <button onClick={() => remove(n.id)} className="btn btn-secondary btn-sm" title="Удалить" style={{ padding: '0.25rem 0.5rem', color: 'var(--color-error)', borderColor: 'transparent' }}>
+                  <button onClick={() => dismiss(n.id)} className="btn btn-secondary btn-sm" title="Скрыть" style={{ padding: '0.25rem 0.5rem', color: 'var(--color-error)', borderColor: 'transparent' }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                       <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                     </svg>

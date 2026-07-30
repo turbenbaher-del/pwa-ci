@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap');
+/* Шрифты подключены <link> в index.html — @import здесь дал бы вторую загрузку и блокировал рендер */
 
 /* ─── CSS CUSTOM PROPERTIES ─────────────────────────────────────────────── */
 :root {
@@ -583,6 +583,24 @@ img, svg { display: block; }
 }
 .filter-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .filter-chip.active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+/* Счётчик документов внутри чипа фильтра */
+.filter-chip-count {
+  display: inline-block;
+  margin-left: 0.375rem;
+  padding: 0 0.3rem;
+  min-width: 1.15em;
+  border-radius: var(--radius-full);
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.filter-chip.active .filter-chip-count {
+  background: rgba(255,255,255,0.28);
+  color: #fff;
+}
 
 /* ─── SEARCH ─────────────────────────────────────────────────────────────── */
 .search-wrapper { position: relative; display: flex; align-items: center; }

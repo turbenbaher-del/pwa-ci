@@ -11,6 +11,12 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const authLogin = useAuthStore((state) => state.login)
+  const loginDemo = useAuthStore((state) => state.loginDemo)
+
+  const handleDemo = () => {
+    loginDemo()
+    navigate('/payments/create')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,6 +88,18 @@ export function LoginPage() {
           {loading ? <span className="spinner" /> : null}
           {loading ? 'Вход...' : 'Войти'}
         </button>
+
+        <div className="login-demo-divider"><span>или</span></div>
+
+        <button
+          type="button"
+          className="btn btn-secondary btn-block"
+          onClick={handleDemo}
+          disabled={loading}
+        >
+          Войти в демо-режиме
+        </button>
+        <p className="login-demo-note">Без входа в банк — прокликать интерфейс на тестовых данных</p>
       </form>
 
       <div className="login-form-footer">

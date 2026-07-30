@@ -4,9 +4,13 @@ export async function registerServiceWorker() {
     return
   }
 
+  // Путь и scope берём из base сборки: в подпапке (GitHub Pages) корневой '/sw.js' даёт 404,
+  // а scope '/' вообще запрещён для скрипта из подпапки.
+  const base = import.meta.env.BASE_URL
+
   try {
-    const registration = await navigator.serviceWorker.register('/sw.js', {
-      scope: '/'
+    const registration = await navigator.serviceWorker.register(`${base}sw.js`, {
+      scope: base
     })
 
     console.log('Service Worker registered:', registration)

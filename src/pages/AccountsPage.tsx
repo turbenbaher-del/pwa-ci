@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAccountsStore } from '../store/accounts'
-import { formatCurrency } from '../utils/format'
+import { formatCurrency, isAccountOpen, accountStatusLabel, sumRubleBalance } from '../utils/format'
 import '../styles/pages.css'
 
 function formatAccountNumber(num: string): string {
@@ -42,11 +42,8 @@ export function AccountsPage() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const totalRub = accounts
-    .filter(a => a.currency === 'RUR' || a.currency === 'RUB')
-    .reduce((sum, a) => sum + a.balance, 0)
-
-  const openCount = accounts.filter(a => a.status === 'Открыт' || a.status === 'active').length
+  const totalRub = sumRubleBalance(accounts)
+  const openCount = accounts.filter(a => isAccountOpen(a.status)).length
 
   return (
     <div className="page">
@@ -112,7 +109,7 @@ export function AccountsPage() {
           </div>
         ) : (
           accounts.map((acc) => {
-            const isOpen = acc.status === 'Открыт' || acc.status === 'active'
+            const isOpen = isAccountOpen(acc.status)
             const formatted = formatAccountNumber(acc.number)
             const isCopied = copied === acc.number
 
@@ -154,14 +151,14 @@ export function AccountsPage() {
 
                 <div className="account-card-right">
                   <div className="account-card-balance">
-                    {formatCurrency(acc.balance, acc.currency === 'RUR' ? 'RUB' : acc.currency)}
+                    {formatCurrency(acc.balance, acc.currency)}
                   </div>
                   <div className="account-card-currency" style={{ marginTop: 6 }}>
                     <span
                       className={`badge ${isOpen ? 'badge-success' : 'badge-neutral'}`}
                       style={{ fontSize: '0.6rem' }}
                     >
-                      {acc.status}
+                      {accountStatusLabel(acc.status)}
                     </span>
                   </div>
                 </div>

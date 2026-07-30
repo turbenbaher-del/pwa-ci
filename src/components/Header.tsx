@@ -1,4 +1,7 @@
+import { useMemo } from 'react'
 import { useAuthStore } from '../store/auth'
+import { usePaymentsStore } from '../store/payments'
+import { useNotificationsStore, buildNotifications } from '../store/notifications'
 import { Link, useNavigate } from 'react-router-dom'
 import { toTitleCase } from '../utils/format'
 import { Logo } from './Logo'
@@ -11,6 +14,17 @@ interface HeaderProps {
 export function Header({ onMenuClick, title }: HeaderProps) {
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const payments = usePaymentsStore(s => s.payments)
+  const { readIds, dismissedIds } = useNotificationsStore()
+
+  // Точка на колокольчике должна отражать реальные непрочитанные события,
+  // а не гореть всегда
+  const unreadCount = useMemo(
+    () => buildNotifications(payments)
+      .filter(n => !dismissedIds.includes(n.id) && !readIds.includes(n.id))
+      .length,
+    [payments, readIds, dismissedIds]
+  )
 
   const initials = user?.name
     .split(' ')
@@ -59,23 +73,29 @@ export function Header({ onMenuClick, title }: HeaderProps) {
           <span className="header-new-payment-text">Платеж</span>
         </Link>
 
-        <Link to="/notifications" className="header-icon-btn" title="Уведомления">
+        <Link
+          to="/notifications"
+          className="header-icon-btn"
+          title={unreadCount > 0 ? `Уведомления: ${unreadCount} непрочитанных` : 'Уведомления'}
+        >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
             <path d="M13.73 21a2 2 0 0 1-3.46 0" />
           </svg>
-          <span
-            style={{
-              position: 'absolute',
-              top: 6,
-              right: 6,
-              width: 8,
-              height: 8,
-              background: 'var(--color-error)',
-              borderRadius: '50%',
-              border: '2px solid var(--color-surface)'
-            }}
-          />
+          {unreadCount > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: 6,
+                right: 6,
+                width: 8,
+                height: 8,
+                background: 'var(--color-error)',
+                borderRadius: '50%',
+                border: '2px solid var(--color-surface)'
+              }}
+            />
+          )}
         </Link>
 
         <button
