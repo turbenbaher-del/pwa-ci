@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAccountsStore } from '../store/accounts'
-import { formatCurrency, isAccountOpen, accountStatusLabel, sumRubleBalance } from '../utils/format'
+import { formatCurrency, isAccountOpen, accountStatusLabel, sumRubleBalance, normalizeCurrency } from '../utils/format'
 import '../styles/pages.css'
 
 function formatAccountNumber(num: string): string {
@@ -116,7 +116,7 @@ export function AccountsPage() {
             return (
               <div key={acc.number} className="account-card">
                 <div className="account-card-icon">
-                  {acc.currency}
+                  {normalizeCurrency(acc.currency)}
                 </div>
 
                 <div className="account-card-info">
@@ -145,7 +145,7 @@ export function AccountsPage() {
                     )}
                   </div>
                   <div className="account-card-meta">
-                    Расчётный счёт · {acc.currency}
+                    Расчётный счёт · {normalizeCurrency(acc.currency)}
                   </div>
                 </div>
 

@@ -33,7 +33,10 @@ export const useAuthStore = create<AuthState>()(
       token: null,
 
       login: async (login: string, password: string) => {
-        setDemo(false)  // реальный вход выключает демо-режим
+        // Демо-режим выключаем ТОЛЬКО после успешного входа. Раньше это делалось
+        // до запроса, и при неудаче приложение оставалось «авторизованным» под
+        // прежним демо-пользователем, но уже тянуло настоящие данные банка —
+        // на экране была демо-подпись поверх реальных счетов.
         const data = await apiFetch('/api/login', {
           method: 'POST',
           body: JSON.stringify({ login, password }),
@@ -41,6 +44,7 @@ export const useAuthStore = create<AuthState>()(
         if (!data.success) {
           throw new Error(data.error || 'Неверные учетные данные')
         }
+        setDemo(false)
 
         const user: User = {
           id: '1',

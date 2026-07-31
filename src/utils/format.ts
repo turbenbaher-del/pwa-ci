@@ -44,6 +44,16 @@ export function sumRubleBalance(accounts: { currency: string; balance: number }[
     .reduce((sum, a) => sum + a.balance, 0)
 }
 
+/** Склонение существительного при числе: 1 счёт, 2 счёта, 5 счетов. */
+export function plural(n: number, one: string, few: string, many: string): string {
+  const abs = Math.abs(n) % 100
+  const last = abs % 10
+  if (abs > 10 && abs < 20) return many
+  if (last > 1 && last < 5) return few
+  if (last === 1) return one
+  return many
+}
+
 export function formatPhone(phone: string): string {
   const cleaned = phone.replace(/\D/g, '')
   if (cleaned.length !== 11) return phone

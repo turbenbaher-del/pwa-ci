@@ -9,6 +9,8 @@ import {
   isAccountOpen,
   accountStatusLabel,
   sumRubleBalance,
+  normalizeCurrency,
+  plural,
 } from '../utils/format'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
@@ -27,6 +29,9 @@ export function DashboardPage() {
   // Складываем только рубли: валютные остатки без курса суммировать нельзя
   const totalBalance = sumRubleBalance(accounts)
   const openAccounts = accounts.filter(a => isAccountOpen(a.status))
+  // Подпись под остатком должна считать те же счета, что и сам остаток,
+  // иначе получается «3 рублёвых счёта» при одном рублёвом
+  const rubleAccounts = openAccounts.filter(a => normalizeCurrency(a.currency) === 'RUB')
   const totalIncoming = payments.filter(p => p.amount > 0).reduce((s, p) => s + p.amount, 0)
   const totalOutgoing = payments.filter(p => p.amount < 0).reduce((s, p) => s + Math.abs(p.amount), 0)
 
@@ -34,93 +39,63 @@ export function DashboardPage() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <h1 className="page-title">Добро пожаловать, {getGreetingName(user?.name)}!</h1>
-        <p className="page-subtitle" style={{ textTransform: 'capitalize' }}>{today}</p>
+      {/* Приветствие ужато в одну строку: на телефоне заголовок в две строки
+          съедал четверть первого экрана до того, как показывались деньги */}
+      <div className="dash-greeting">
+        <span className="dash-greeting-name">{getGreetingName(user?.name)}</span>
+        <span className="dash-greeting-date">{today}</span>
       </div>
 
-      {/* KPI Cards */}
-      <div className="kpi-grid">
-        <div className="kpi-card">
-          <div className="kpi-card-icon green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-          </div>
-          <div className="kpi-card-label">Общий остаток</div>
-          <div className="kpi-card-value">
-            {accountsLoading ? '...' : formatCurrency(totalBalance)}
-          </div>
-          <div className="kpi-card-meta">По рублёвым счетам</div>
+      {/* Главное на экране — остаток. Обороты рядом, компактной строкой */}
+      <div className="dash-hero">
+        <div className="dash-hero-label">Остаток на счетах</div>
+        <div className="dash-hero-value">
+          {accountsLoading ? <span className="skeleton-line" /> : formatCurrency(totalBalance)}
+        </div>
+        <div className="dash-hero-meta">
+          {rubleAccounts.length > 0
+            ? `${rubleAccounts.length} ${plural(rubleAccounts.length, 'рублёвый счёт', 'рублёвых счёта', 'рублёвых счетов')}`
+            + (openAccounts.length > rubleAccounts.length
+              ? ` · ещё ${openAccounts.length - rubleAccounts.length} в валюте`
+              : '')
+            : 'нет рублёвых счетов'}
         </div>
 
-        <div className="kpi-card">
-          <div className="kpi-card-icon green">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
-              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-              <polyline points="17 6 23 6 23 12" />
-            </svg>
+        <div className="dash-flows">
+          <div className="dash-flow">
+            <span className="dash-flow-label">Поступления</span>
+            <span className="dash-flow-value pos">
+              {payments.length > 0 ? formatCurrency(totalIncoming) : '—'}
+            </span>
           </div>
-          <div className="kpi-card-label">Поступления</div>
-          <div className="kpi-card-value">
-            {payments.length > 0 ? formatCurrency(totalIncoming) : '—'}
+          <div className="dash-flow">
+            <span className="dash-flow-label">Списания</span>
+            <span className="dash-flow-value neg">
+              {payments.length > 0 ? formatCurrency(-totalOutgoing) : '—'}
+            </span>
           </div>
-          <div className="kpi-card-meta">За период</div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-card-icon orange">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
-              <polyline points="23 18 13.5 8.5 8.5 13.5 1 6" />
-              <polyline points="17 18 23 18 23 12" />
-            </svg>
-          </div>
-          <div className="kpi-card-label">Списания</div>
-          <div className="kpi-card-value">
-            {payments.length > 0 ? formatCurrency(totalOutgoing) : '—'}
-          </div>
-          <div className="kpi-card-meta">За период</div>
-        </div>
-
-        <div className="kpi-card">
-          <div className="kpi-card-icon blue">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" width="20" height="20">
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <path d="M2 10h20" />
-            </svg>
-          </div>
-          <div className="kpi-card-label">Счетов</div>
-          <div className="kpi-card-value">
-            {accountsLoading ? '...' : openAccounts.length}
-          </div>
-          <div className="kpi-card-meta">Активных</div>
         </div>
       </div>
 
-      {/* Accounts list */}
+      {/* Счета */}
       {accounts.length > 0 && (
         <div className="section">
           <div className="section-header">
             <h2 className="section-title">Счета</h2>
+            <Link to="/accounts" className="section-action">Все</Link>
           </div>
           <div className="section-body">
-            <div className="tx-list">
-              {accounts.map((acc) => (
-                <div key={acc.number} className="tx-item">
-                  <div className="tx-avatar" style={{ fontSize: '0.7rem', letterSpacing: '-0.5px' }}>
-                    {acc.currency}
-                  </div>
-                  <div className="tx-info">
-                    <div className="tx-name" style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                      {acc.number.replace(/(\d{5})(\d{3})(\d)(\d{11})/, '$1.$2.$3.$4')}
-                    </div>
-                    <div className="tx-desc">{accountStatusLabel(acc.status)}</div>
-                  </div>
-                  <div className="tx-right">
-                    <div className="tx-amount">{formatCurrency(acc.balance, acc.currency)}</div>
-                    <div className="tx-date">{acc.currency}</div>
-                  </div>
-                </div>
+            <div className="acc-list">
+              {accounts.slice(0, 4).map((acc) => (
+                <Link to="/accounts" key={acc.number} className="acc-row">
+                  <span className="acc-badge">{normalizeCurrency(acc.currency)}</span>
+                  <span className="acc-main">
+                    {/* Показываем хвост номера: полные 20 цифр — шум на экране телефона */}
+                    <span className="acc-number">·· {acc.number.slice(-4)}</span>
+                    <span className="acc-status">{accountStatusLabel(acc.status)}</span>
+                  </span>
+                  <span className="acc-balance">{formatCurrency(acc.balance, acc.currency)}</span>
+                </Link>
               ))}
             </div>
           </div>
