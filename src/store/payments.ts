@@ -82,9 +82,19 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
         if (filters.search) params.append('search', filters.search)
       }
 
-      const data = await apiFetch(`/api/payments?${params}`)
+      // Два источника: выписка и документы клиента.
+      //  /api/payments   — проведённые операции, включая входящие поступления;
+      //  /api/documents  — документы с идентификаторами банка и настоящими
+      //                    статусами (черновики, на подпись, отклонённые).
+      // Выписка не содержит непроведённых документов, документы — входящих,
+      // поэтому берём и то, и другое.
+      const [data, docsResponse] = await Promise.all([
+        apiFetch(`/api/payments?${params}`),
+        apiFetch('/api/documents').catch(() => ({ data: [] })),
+      ])
       // API returns { success, data: [] } — handle both shapes
       const list = Array.isArray(data) ? data : (data.data ?? [])
+      const documents = docsResponse?.data ?? []
       const parseDate = (d: any) => {
         if (!d) return new Date()
         const s = String(d)
@@ -101,11 +111,16 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           'В ОБРАБОТКЕ': 'sent', 'sent': 'sent',
           'ОТКЛОНЕН': 'rejected', 'ОТКЛОНЁН': 'rejected', 'rejected': 'rejected',
           'signed': 'signed', 'approved': 'approved',
+          // Фактические статусы документов ДБО
+          'СОЗДАН': 'created',
+          'ПОДПИСАН': 'signed',
+          'ОШИБКА КОНТРОЛЯ': 'rejected',
+          'ОТМЕНЁН БАНКОМ': 'rejected', 'ОТМЕНЕН БАНКОМ': 'rejected',
+          'ОТВЕРГНУТ БАНКОМ': 'rejected',
         }
         return map[(s || '').trim().toUpperCase()] ?? map[s] ?? 'executed'
       }
-      set({
-        payments: list.map((p: any) => ({
+      const fromStatement: Payment[] = list.map((p: any) => ({
           // ID должен быть устойчив между обновлениями списка: на Math.random()
           // ссылка на платёж ломалась после каждой перезагрузки
           id: p.id ?? [p.date, p.number, p.amount].filter(Boolean).join('|'),
@@ -128,7 +143,38 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           modifiedAt: parseDate(p.modifiedAt ?? p.date ?? p.createdAt),
           signedAt: p.signedAt ? parseDate(p.signedAt) : undefined,
           approvedAt: p.approvedAt ? parseDate(p.approvedAt) : undefined,
-        })),
+        }))
+
+      // Из документов берём только НЕпроведённые: исполненные уже есть
+      // в выписке, причём там богаче назначение и есть дата операции.
+      const fromDocuments: Payment[] = documents
+        .map((d: any) => ({ d, status: normalizeStatus(d.status ?? '') }))
+        .filter(({ status }: any) => status !== 'executed')
+        .map(({ d, status }: any) => ({
+          id: d.id,
+          number: d.number || undefined,
+          status,
+          amount: d.amount ?? 0,
+          currency: 'RUR',
+          // Банк не отдаёт дату в списке документов — ставим текущую,
+          // чтобы непроведённые документы были наверху списка
+          date: new Date(),
+          recipient: { name: d.recipient || '', account: '', bank: '', bic: '' },
+          payer: { name: '', account: d.account || '' },
+          purpose: d.purpose || '',
+          priority: 'normal' as const,
+          commissionPayment: 'payer' as const,
+          account: d.account || undefined,
+          direction: 'out' as const,
+          // Что банк разрешает делать с документом: подпись, удаление
+          details: { actions: d.actions ?? [], bankStatus: d.status, stateCode: d.stateCode },
+          createdAt: new Date(),
+          modifiedAt: new Date(),
+        }))
+
+      set({
+        // Непроведённые документы наверху — они требуют действия
+        payments: [...fromDocuments, ...fromStatement],
         loading: false
       })
     } catch (error) {
