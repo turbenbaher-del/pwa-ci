@@ -90,18 +90,15 @@ export function TransferPage() {
         }),
       })
 
-      if (json.success === false) throw new Error(json.error || 'Банк не принял перевод')
+      // success теперь отражает реальный итог банка. Не принял — показываем
+      // причину и НЕ пишем «отправлено».
+      if (json.success === false) {
+        throw new Error(json.error || 'Банк не принял перевод')
+      }
 
-      // Прокси возвращает состояние формы и текст экрана ДБО — показываем его как есть,
-      // чтобы не выдавать за успех то, что банк мог не провести.
-      const screen: string = json.data?.screen || ''
       setSuccess(sign
         ? 'Перевод отправлен в банк. Проверьте статус в разделе «Платежи».'
         : 'Черновик перевода сохранён в ДБО.')
-      if (/ошибк|не удалось|отклон/i.test(screen)) {
-        setError('Ответ банка: ' + screen.slice(0, 300))
-        setSuccess('')
-      }
       setAmount('')
     } catch (e) {
       setError(friendlyError(e, 'Не удалось выполнить перевод'))

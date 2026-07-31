@@ -32,11 +32,26 @@ export const useAccountsStore = create<AccountsState>((set) => ({
   fetchAccounts: async () => {
     if (isDemo()) { set({ accounts: demoAccounts, loading: false, error: null }); return }
     set({ loading: true, error: null })
-    try {
-      const data = await apiFetch('/api/accounts')
-      set({ accounts: data.data ?? data, loading: false })
-    } catch (err) {
-      set({ error: err instanceof Error ? err.message : 'Ошибка загрузки', loading: false })
+    // Первый запрос после простоя банк может отдать «ещё загружается» (503) —
+    // список счетов кэшируется на прокси и появляется со второй попытки.
+    // Поэтому повторяем несколько раз, а не сдаёмся с пустым списком.
+    for (let attempt = 0; attempt < 4; attempt++) {
+      try {
+        const data = await apiFetch('/api/accounts')
+        const list = data.data ?? data
+        if (Array.isArray(list) && list.length > 0) {
+          set({ accounts: list, loading: false, error: null })
+          return
+        }
+      } catch (err) {
+        // последняя попытка — покажем ошибку, иначе тихо повторим
+        if (attempt === 3) {
+          set({ error: err instanceof Error ? err.message : 'Ошибка загрузки', loading: false })
+          return
+        }
+      }
+      await new Promise(r => setTimeout(r, 2500))
     }
+    set({ loading: false })
   },
 }))
