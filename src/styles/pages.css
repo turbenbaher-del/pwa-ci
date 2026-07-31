@@ -583,9 +583,30 @@
 /* Form rows collapse at 640px (not 1024px) */
 @media (max-width: 640px) {
   .form-row { grid-template-columns: 1fr; }
-  .payments-toolbar { flex-direction: column; align-items: stretch; }
+  /* flex-wrap на колоночном флексе задаёт ширину «линии» по самому широкому
+     элементу — из-за этого поле поиска растягивалось за край экрана */
+  .payments-toolbar { flex-direction: column; align-items: stretch; flex-wrap: nowrap; }
+  .payments-toolbar > * { min-width: 0; }
   .section-header { padding: 0.75rem 1rem; }
   .form-section { padding: 1rem; }
+
+  /* Фильтры переносились на несколько рядов и съедали половину первого
+     экрана. Прокручиваем их в одну строку — список платежей виден сразу. */
+  .payments-toolbar-left {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    gap: 0.5rem;
+    /* край строки не должен упираться в границу экрана */
+    padding-inline: var(--space-4);
+    margin-inline: calc(-1 * var(--space-4));
+  }
+  .payments-toolbar-left::-webkit-scrollbar { display: none; }
+  .payments-toolbar-left .filter-chip { flex: 0 0 auto; }
+
+  /* «Новый платёж» есть в нижней навигации («Создать») и в пустом состоянии —
+     третья кнопка сверху забирала экран у самого списка */
+  .page-header .btn-primary { display: none; }
 }
 
 @media (max-width: 768px) {
