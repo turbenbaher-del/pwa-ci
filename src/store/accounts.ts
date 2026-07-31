@@ -9,8 +9,12 @@ export interface Account {
   status: string
   /** Название счёта в банке: «ГО», «корп.карта», «р/с Ставрополь» */
   name?: string
-  /** Откуда взялся остаток: form — из данных банка, header — из шапки страницы */
+  /** Откуда взялся остаток: form/api — из данных банка, unknown — банк не дал */
   balanceSource?: string
+  /** Предупреждение банка об арестах: «по 3 счетам в размере всех средств» */
+  seizureNotice?: string
+  /** Сколько счетов под арестом, если банк указал число */
+  seizureAccounts?: number | null
 }
 
 interface AccountsState {

@@ -32,6 +32,8 @@ export function DashboardPage() {
   // Подпись под остатком должна считать те же счета, что и сам остаток,
   // иначе получается «3 рублёвых счёта» при одном рублёвом
   const rubleAccounts = openAccounts.filter(a => normalizeCurrency(a.currency) === 'RUB')
+  // Предупреждение об арестах банк даёт общее по клиенту, а не по счёту
+  const seizureNotice = accounts.find(a => a.seizureNotice)?.seizureNotice
   const totalIncoming = payments.filter(p => p.amount > 0).reduce((s, p) => s + p.amount, 0)
   const totalOutgoing = payments.filter(p => p.amount < 0).reduce((s, p) => s + Math.abs(p.amount), 0)
 
@@ -60,6 +62,18 @@ export function DashboardPage() {
               : '')
             : 'нет рублёвых счетов'}
         </div>
+
+        {/* Аресты по счетам: деньги на них недоступны. Банк показывает это
+            красным на первом экране — скрывать такое нельзя. */}
+        {seizureNotice && (
+          <div className="dash-seizure">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>Арестовано {seizureNotice}</span>
+          </div>
+        )}
 
         <div className="dash-flows">
           <div className="dash-flow">
