@@ -1019,3 +1019,8 @@
   border-radius: 6px;
   background: var(--color-border-light);
 }
+.dash-flow-value.empty {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-muted);
+}

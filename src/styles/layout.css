@@ -232,13 +232,11 @@
     align-items: center;
   }
 
-  /* "New Payment" button — icon only, hide text */
-  .header-new-payment-text { display: none; }
-  .header-new-payment-btn {
-    min-width: 40px;
-    min-height: 40px;
-    padding: 0 0.5rem;
-  }
+  /* На телефоне кнопка «Платёж» в шапке не нужна: то же действие есть
+     в нижней навигации («Создать»), а в шапке она забирала место,
+     делала ряд из пяти элементов и налезала на логотип.
+     Селектор с родителем — иначе правило проигрывает display у .btn. */
+  .header-right .header-new-payment-btn { display: none; }
 
   /* Header touch targets */
   .header-icon-btn,

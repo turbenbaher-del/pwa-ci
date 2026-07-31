@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/auth'
 import { useContractorsStore } from '../store/contractors'
 import { useTemplatesStore, type PaymentTemplate } from '../store/templates'
 import { confirm } from '../store/confirm'
+import { formatCurrency } from '../utils/format'
 import '../styles/pages.css'
 
 // Центр-Инвест БИК — платёж внутри банка идёт без комиссии.
@@ -53,6 +54,9 @@ export function CreatePaymentPage() {
     priority:          'normal',
     commissionPayment: 'payer',
   })
+
+  // Выбранный счёт списания — под списком показываем полный номер и остаток
+  const selectedPayer = accounts.find(a => a.number === formData.payerAccount)
 
   useEffect(() => {
     fetchAccounts()
@@ -264,11 +268,18 @@ export function CreatePaymentPage() {
                   <option value="">Загрузка счетов...</option>
                 )}
                 {accounts.map(acc => (
+                  // Полный номер со всей суммой не помещается в выпадающий список
+                  // на телефоне — показываем хвост счёта и остаток
                   <option key={acc.number} value={acc.number}>
-                    {acc.number} — {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: acc.currency === 'RUR' ? 'RUB' : acc.currency }).format(acc.balance)}
+                    ·· {acc.number.slice(-4)} · {formatCurrency(acc.balance, acc.currency)}
                   </option>
                 ))}
               </select>
+              {selectedPayer && (
+                <div className="form-hint">
+                  {selectedPayer.number} · доступно {formatCurrency(selectedPayer.balance, selectedPayer.currency)}
+                </div>
+              )}
             </div>
           </div>
 

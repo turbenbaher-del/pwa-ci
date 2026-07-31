@@ -64,14 +64,15 @@ export function DashboardPage() {
         <div className="dash-flows">
           <div className="dash-flow">
             <span className="dash-flow-label">Поступления</span>
-            <span className="dash-flow-value pos">
-              {payments.length > 0 ? formatCurrency(totalIncoming) : '—'}
+            {/* Прочерк читался как сбой отрисовки — пишем словами */}
+            <span className={`dash-flow-value ${payments.length > 0 ? 'pos' : 'empty'}`}>
+              {payments.length > 0 ? formatCurrency(totalIncoming) : 'нет операций'}
             </span>
           </div>
           <div className="dash-flow">
             <span className="dash-flow-label">Списания</span>
-            <span className="dash-flow-value neg">
-              {payments.length > 0 ? formatCurrency(-totalOutgoing) : '—'}
+            <span className={`dash-flow-value ${payments.length > 0 ? 'neg' : 'empty'}`}>
+              {payments.length > 0 ? formatCurrency(-totalOutgoing) : 'нет операций'}
             </span>
           </div>
         </div>
