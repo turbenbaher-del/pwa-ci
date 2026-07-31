@@ -120,6 +120,10 @@ export function AccountsPage() {
                 </div>
 
                 <div className="account-card-info">
+                  {/* Название счёта заголовком: раньше первой строкой шёл номер,
+                      он конкурировал с кнопкой копирования и обрезался
+                      многоточием — «40802.810.3.0950000…» */}
+                  <div className="account-card-title">{acc.name || 'Расчётный счёт'}</div>
                   <div className="account-card-number">
                     <span>{formatted}</span>
                     <button
@@ -145,7 +149,8 @@ export function AccountsPage() {
                     )}
                   </div>
                   <div className="account-card-meta">
-                    {acc.name || 'Расчётный счёт'} · {normalizeCurrency(acc.currency)}
+                    {normalizeCurrency(acc.currency)}
+                    {acc.seizureNotice ? ' · под арестом' : ''}
                   </div>
                 </div>
 

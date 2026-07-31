@@ -1,5 +1,6 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { format } from 'date-fns'
+import { ru } from 'date-fns/locale'
 import { useAuthStore } from '../store/auth'
 import { useThemeStore } from '../store/theme'
 import { toTitleCase } from '../utils/format'
@@ -9,21 +10,6 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const { isDark, toggleDark, fontSize, setFontSize } = useThemeStore()
-  const [showPasswordForm, setShowPasswordForm] = useState(false)
-  const [newPassword, setNewPassword] = useState('')
-  const [pwMessage, setPwMessage] = useState('')
-
-  const handleChangePassword = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newPassword.length < 6) {
-      setPwMessage('Пароль должен быть минимум 6 символов')
-      return
-    }
-    setPwMessage('Пароль успешно изменён')
-    setNewPassword('')
-    setTimeout(() => { setPwMessage(''); setShowPasswordForm(false) }, 2000)
-  }
-
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -102,31 +88,30 @@ export function SettingsPage() {
             Безопасность
           </div>
           <div style={sectionBody}>
-            {!showPasswordForm ? (
-              <button onClick={() => setShowPasswordForm(true)} className="btn btn-secondary btn-sm">
-                Изменить пароль
-              </button>
-            ) : (
-              <form onSubmit={handleChangePassword}>
-                {pwMessage && (
-                  <div className={`alert ${pwMessage.includes('успешно') ? 'alert-success' : 'alert-error'}`} style={{ marginBottom: '1rem' }}>
-                    {pwMessage}
-                  </div>
-                )}
-                <div className="form-group">
-                  <label>Новый пароль</label>
-                  <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Минимум 6 символов" autoFocus />
-                </div>
-                <div className="flex" style={{ gap: '0.75rem' }}>
-                  <button type="submit" className="btn btn-primary flex-1">Сохранить</button>
-                  <button type="button" onClick={() => setShowPasswordForm(false)} className="btn btn-secondary flex-1">Отмена</button>
-                </div>
-              </form>
-            )}
+            {/* Здесь стояла форма смены пароля, которая ничего не меняла: она
+                просто писала «Пароль успешно изменён». В банковском приложении
+                это опаснее отсутствия функции — человек поверит, что сменил
+                пароль от банка. Пароль меняется только в самом ДБО. */}
+            <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-text)', lineHeight: 1.5 }}>
+              Пароль и способ подтверждения операций меняются в интернет-банке
+              «Центр-инвест». Приложение работает через ваш вход в ДБО и своих
+              паролей не хранит.
+            </div>
+            <a
+              href="https://dbo.centrinvest.ru/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary btn-sm"
+              style={{ marginTop: '0.875rem', textDecoration: 'none', display: 'inline-flex' }}
+            >
+              Открыть ДБО
+            </a>
 
-            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={labelStyle}>Двухфакторная аутентификация</span>
-              <span className="badge badge-success">Включена</span>
+            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={labelStyle}>Подтверждение операций</span>
+              {/* Раньше здесь горело «Двухфакторная аутентификация: включена» —
+                  в приложении её нет вовсе, подтверждение запрашивает банк */}
+              <span className="badge badge-neutral" style={{ flexShrink: 0 }}>на стороне банка</span>
             </div>
           </div>
         </div>
@@ -198,7 +183,8 @@ export function SettingsPage() {
           <div style={sectionBody}>
             {[
               { label: 'Версия', value: 'PWA 2.0' },
-              { label: 'Дата сборки', value: '19 мая 2026' },
+              // Дата подставляется при сборке, а не вписывается руками
+              { label: 'Дата сборки', value: format(new Date(__BUILD_DATE__), 'd MMMM yyyy, HH:mm', { locale: ru }) },
               { label: 'Банк', value: 'ПАО «Центр-инвест»' },
             ].map(({ label, value }, i, arr) => (
               <div key={label} style={{ ...rowStyle, ...(i === arr.length - 1 ? { borderBottom: 'none', marginBottom: 0, paddingBottom: 0 } : {}) }}>

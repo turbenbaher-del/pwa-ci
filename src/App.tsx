@@ -21,12 +21,19 @@ import { NotificationsPage } from './pages/NotificationsPage'
 import { ConfirmModal } from './components/ConfirmModal'
 
 export function App() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isSessionConsistent, logout } = useAuthStore()
   const { isDark } = useThemeStore()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
   }, [isDark])
+
+  // Демо-личность поверх настоящих данных банка — признак прерванного входа.
+  // На экране это выглядело как «Демо-компания ООО» с живыми счетами:
+  // сбрасываем сессию, чтобы человек вошёл заново и видел, кто он.
+  useEffect(() => {
+    if (isAuthenticated && !isSessionConsistent()) logout()
+  }, [isAuthenticated, isSessionConsistent, logout])
 
   return (
     // basename берём из base сборки, чтобы приложение жило и в подпапке, и в корне домена

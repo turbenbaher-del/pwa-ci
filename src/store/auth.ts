@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { apiFetch } from '../utils/api'
-import { setDemo, demoContractors } from '../utils/demo'
+import { setDemo, isDemo, demoContractors } from '../utils/demo'
 import { useContractorsStore } from './contractors'
 
 export interface User {
@@ -22,12 +22,14 @@ export interface AuthState {
   login: (login: string, password: string) => Promise<void>
   loginDemo: () => void
   logout: () => void
+  /** Демо-личность не осталась поверх настоящих данных банка? */
+  isSessionConsistent: () => boolean
   updateUser: (user: Partial<User>) => void
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       isAuthenticated: false,
       user: null,
       token: null,
@@ -70,6 +72,14 @@ export const useAuthStore = create<AuthState>()(
         // seed demo contractors so the payment form's picker works
         useContractorsStore.setState({ contractors: demoContractors })
         set({ isAuthenticated: true, user, token: 'demo-token' })
+      },
+
+      // Сессия целостна? Демо-личность не должна оставаться поверх настоящих
+      // данных банка: так на экране был «Демо-компания ООО» с живыми счетами.
+      isSessionConsistent: () => {
+        const state = get()
+        if (!state.isAuthenticated || !state.user) return true
+        return (state.user.id === 'demo') === isDemo()
       },
 
       logout: () => {

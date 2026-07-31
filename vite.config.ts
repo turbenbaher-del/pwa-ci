@@ -7,6 +7,10 @@ import { VitePWA } from 'vite-plugin-pwa'
 const BASE = process.env.VITE_BASE || '/pwa-ci/'
 
 export default defineConfig({
+  // Дата сборки была вписана строкой и устаревала — подставляем настоящую
+  define: {
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+  },
   base: BASE,
   plugins: [
     react(),

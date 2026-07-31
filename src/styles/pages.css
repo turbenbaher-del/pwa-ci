@@ -1063,3 +1063,15 @@
   line-height: 1.4;
 }
 .dash-seizure svg { flex-shrink: 0; margin-top: 1px; }
+
+/* Название счёта — заголовок карточки; номер строкой ниже, во всю ширину */
+.account-card-title {
+  font-family: var(--font-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 2px;
+}
+/* Номер не должен обрезаться из-за кнопки копирования рядом */
+.account-card-number { flex-wrap: wrap; }
+.account-card-number > span { font-size: var(--text-xs); }
