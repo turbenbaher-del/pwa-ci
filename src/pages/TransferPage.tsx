@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAccountsStore } from '../store/accounts'
 import { apiFetch, friendlyError } from '../utils/api'
 import { isDemo } from '../utils/demo'
-import { confirm } from '../store/confirm'
 import { formatCurrency, isAccountOpen, normalizeCurrency } from '../utils/format'
 import '../styles/pages.css'
 
@@ -50,32 +49,18 @@ export function TransferPage() {
     return ''
   }
 
-  const send = async (sign: boolean) => {
+  // Перевод создаёт ДОКУМЕНТ. Подпись — отдельный шаг через окно ключа токена
+  // в разделе «Платежи»: подписать перевод на форме нельзя, банк требует
+  // интерактивный ключ eToken + подтверждение в PayControl.
+  const send = async () => {
     const problem = validate()
     if (problem) { setError(problem); return }
     setError(''); setSuccess('')
 
-    if (sign) {
-      const { ok } = await confirm({
-        title: 'Отправить перевод в банк?',
-        message: 'Деньги спишутся со счёта. Подтверждение подписи запросит сам банк.',
-        details: [
-          { label: 'Сумма', value: formatCurrency(amountValue, from!.currency) },
-          { label: 'Со счёта', value: shortAccount(from!.number) },
-          { label: 'На счёт', value: shortAccount(to!.number) },
-        ],
-        confirmLabel: 'Отправить',
-        danger: true,
-      })
-      if (!ok) return
-    }
-
     setBusy(true)
     try {
       if (isDemo()) {
-        setSuccess(sign
-          ? 'Демо-режим: перевод не отправлялся в банк'
-          : 'Демо-режим: черновик не сохранялся в банк')
+        setSuccess('Демо-режим: документ не сохранялся в банк')
         return
       }
 
@@ -86,22 +71,17 @@ export function TransferPage() {
           toAccount: to!.number,
           amount: amountValue,
           purpose: purpose.trim(),
-          sign,
         }),
       })
 
-      // success теперь отражает реальный итог банка. Не принял — показываем
-      // причину и НЕ пишем «отправлено».
       if (json.success === false) {
         throw new Error(json.error || 'Банк не принял перевод')
       }
 
-      setSuccess(sign
-        ? 'Перевод отправлен в банк. Проверьте статус в разделе «Платежи».'
-        : 'Черновик перевода сохранён в ДБО.')
+      setSuccess('Документ создан. Чтобы деньги ушли — откройте его в «Платежах» и подпишите ключом токена.')
       setAmount('')
     } catch (e) {
-      setError(friendlyError(e, 'Не удалось выполнить перевод'))
+      setError(friendlyError(e, 'Не удалось создать перевод'))
     } finally {
       setBusy(false)
     }
@@ -186,14 +166,13 @@ export function TransferPage() {
           <div className="form-hint">{purpose.length} / 210</div>
         </div>
 
-        <div className="flex" style={{ gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button className="btn btn-primary flex-1" onClick={() => send(true)} disabled={busy}>
-            {busy ? <span className="spinner" /> : null} Подписать и отправить
-          </button>
-          <button className="btn btn-secondary flex-1" onClick={() => send(false)} disabled={busy}>
-            Сохранить черновик
-          </button>
-        </div>
+        <button className="btn btn-primary btn-block" onClick={send} disabled={busy}>
+          {busy ? <span className="spinner" /> : null} Создать перевод
+        </button>
+        <p style={{ margin: '0.625rem 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+          Документ появится в «Платежах». Чтобы деньги ушли, откройте его и
+          подпишите ключом с токена.
+        </p>
 
         <button className="btn btn-ghost btn-block" style={{ marginTop: '0.75rem' }} onClick={() => navigate('/payments')} disabled={busy}>
           К списку платежей
