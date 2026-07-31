@@ -1031,6 +1031,7 @@
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
+.acc-balance.muted { color: var(--color-text-muted); font-weight: 500; }
 
 /* Заглушка на время загрузки — вместо прыгающего «...» */
 .skeleton-line {

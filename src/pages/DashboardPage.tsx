@@ -98,7 +98,12 @@ export function DashboardPage() {
                       {acc.name ? `·· ${acc.number.slice(-4)}` : accountStatusLabel(acc.status)}
                     </span>
                   </span>
-                  <span className="acc-balance">{formatCurrency(acc.balance, acc.currency)}</span>
+                  {/* Банк отдаёт остаток не по всем счетам. Показывать ноль
+                      там, где суммы просто нет, — значит выдавать выдумку
+                      за факт: пишем прочерк. */}
+                  <span className={`acc-balance ${acc.balanceSource === 'unknown' ? 'muted' : ''}`}>
+                    {acc.balanceSource === 'unknown' ? '—' : formatCurrency(acc.balance, acc.currency)}
+                  </span>
                 </Link>
               ))}
             </div>
