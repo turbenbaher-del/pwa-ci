@@ -7,6 +7,10 @@ export interface Account {
   currency: string
   balance: number
   status: string
+  /** Название счёта в банке: «ГО», «корп.карта», «р/с Ставрополь» */
+  name?: string
+  /** Откуда взялся остаток: form — из данных банка, header — из шапки страницы */
+  balanceSource?: string
 }
 
 interface AccountsState {

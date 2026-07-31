@@ -145,7 +145,7 @@ export function AccountsPage() {
                     )}
                   </div>
                   <div className="account-card-meta">
-                    Расчётный счёт · {normalizeCurrency(acc.currency)}
+                    {acc.name || 'Расчётный счёт'} · {normalizeCurrency(acc.currency)}
                   </div>
                 </div>
 

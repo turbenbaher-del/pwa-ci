@@ -91,9 +91,12 @@ export function DashboardPage() {
                 <Link to="/accounts" key={acc.number} className="acc-row">
                   <span className="acc-badge">{normalizeCurrency(acc.currency)}</span>
                   <span className="acc-main">
-                    {/* Показываем хвост номера: полные 20 цифр — шум на экране телефона */}
-                    <span className="acc-number">·· {acc.number.slice(-4)}</span>
-                    <span className="acc-status">{accountStatusLabel(acc.status)}</span>
+                    {/* Название счёта из банка («ГО», «корп.карта») понятнее номера.
+                        Полные 20 цифр на телефоне — шум, оставляем хвост. */}
+                    <span className="acc-number">{acc.name || `·· ${acc.number.slice(-4)}`}</span>
+                    <span className="acc-status">
+                      {acc.name ? `·· ${acc.number.slice(-4)}` : accountStatusLabel(acc.status)}
+                    </span>
                   </span>
                   <span className="acc-balance">{formatCurrency(acc.balance, acc.currency)}</span>
                 </Link>

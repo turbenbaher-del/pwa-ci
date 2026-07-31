@@ -44,6 +44,9 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     html, body, #root { width: 100%; height: 100%; }
+    /* Высота по видимой части экрана: с адресной строкой браузера
+       100% давало полотно выше экрана и уводило нижнюю панель вниз */
+    body, #root { height: 100dvh; }
 
     /* Фон тянем и на html — иначе в standalone под системными областями белые полосы */
     html { background-color: #F4FDFB; }

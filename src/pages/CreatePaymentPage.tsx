@@ -271,7 +271,7 @@ export function CreatePaymentPage() {
                   // Полный номер со всей суммой не помещается в выпадающий список
                   // на телефоне — показываем хвост счёта и остаток
                   <option key={acc.number} value={acc.number}>
-                    ·· {acc.number.slice(-4)} · {formatCurrency(acc.balance, acc.currency)}
+                    {acc.name ? `${acc.name} · ` : ''}·· {acc.number.slice(-4)} · {formatCurrency(acc.balance, acc.currency)}
                   </option>
                 ))}
               </select>

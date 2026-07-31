@@ -1,6 +1,10 @@
 .layout {
   display: flex;
+  /* 100vh на телефоне — высота БЕЗ адресной строки браузера: приложение
+     оказывалось выше видимой области, и нижняя панель уезжала под браузер.
+     dvh считает по фактически видимой части, 100vh оставлен запасным. */
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   background: var(--color-bg);
 }
@@ -9,6 +13,7 @@
 .sidebar {
   width: var(--sidebar-width);
   height: 100vh;
+  height: 100dvh;
   background: var(--color-secondary);
   display: flex;
   flex-direction: column;
@@ -207,6 +212,7 @@
     position: fixed;
     left: 0; top: 0;
     height: 100vh;
+    height: 100dvh;
     transform: translateX(-100%);
     z-index: 200;
     box-shadow: none;

@@ -138,7 +138,7 @@ export function TransferPage() {
             </option>
             {available.map(a => (
               <option key={a.number} value={a.number}>
-                {shortAccount(a.number)} · {formatCurrency(a.balance, a.currency)}
+                {a.name ? a.name + " · " : ""}{shortAccount(a.number)} · {formatCurrency(a.balance, a.currency)}
               </option>
             ))}
           </select>
@@ -155,7 +155,7 @@ export function TransferPage() {
             <option value="">{fromAccount ? 'Выберите счёт' : 'Сначала выберите счёт списания'}</option>
             {targets.map(a => (
               <option key={a.number} value={a.number}>
-                {shortAccount(a.number)} · {formatCurrency(a.balance, a.currency)}
+                {a.name ? a.name + " · " : ""}{shortAccount(a.number)} · {formatCurrency(a.balance, a.currency)}
               </option>
             ))}
           </select>
