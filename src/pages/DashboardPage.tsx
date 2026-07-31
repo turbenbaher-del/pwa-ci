@@ -34,8 +34,16 @@ export function DashboardPage() {
   const rubleAccounts = openAccounts.filter(a => normalizeCurrency(a.currency) === 'RUB')
   // Предупреждение об арестах банк даёт общее по клиенту, а не по счёту
   const seizureNotice = accounts.find(a => a.seizureNotice)?.seizureNotice
-  const totalIncoming = payments.filter(p => p.amount > 0).reduce((s, p) => s + p.amount, 0)
-  const totalOutgoing = payments.filter(p => p.amount < 0).reduce((s, p) => s + Math.abs(p.amount), 0)
+  // Банк показывает обороты за текущий месяц, а не за всю историю —
+  // суммы по всей выписке вводили в заблуждение
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime()
+  const monthPayments = payments.filter(p => {
+    const t = (p.date instanceof Date ? p.date : new Date(p.date)).getTime()
+    return t >= monthStart
+  })
+  const totalIncoming = monthPayments.filter(p => p.amount > 0).reduce((s, p) => s + p.amount, 0)
+  const totalOutgoing = monthPayments.filter(p => p.amount < 0).reduce((s, p) => s + Math.abs(p.amount), 0)
+  const monthLabel = format(new Date(), 'LLLL', { locale: ru })
 
   const today = format(new Date(), 'EEEE, d MMMM', { locale: ru })
 
@@ -77,16 +85,16 @@ export function DashboardPage() {
 
         <div className="dash-flows">
           <div className="dash-flow">
-            <span className="dash-flow-label">Поступления</span>
+            <span className="dash-flow-label">Поступления · {monthLabel}</span>
             {/* Прочерк читался как сбой отрисовки — пишем словами */}
-            <span className={`dash-flow-value ${payments.length > 0 ? 'pos' : 'empty'}`}>
-              {payments.length > 0 ? formatCurrency(totalIncoming) : 'нет операций'}
+            <span className={`dash-flow-value ${monthPayments.length > 0 ? "pos" : "empty"}`}>
+              {monthPayments.length > 0 ? formatCurrency(totalIncoming) : "нет операций"}
             </span>
           </div>
           <div className="dash-flow">
-            <span className="dash-flow-label">Списания</span>
-            <span className={`dash-flow-value ${payments.length > 0 ? 'neg' : 'empty'}`}>
-              {payments.length > 0 ? formatCurrency(-totalOutgoing) : 'нет операций'}
+            <span className="dash-flow-label">Списания · {monthLabel}</span>
+            <span className={`dash-flow-value ${monthPayments.length > 0 ? "neg" : "empty"}`}>
+              {monthPayments.length > 0 ? formatCurrency(-totalOutgoing) : "нет операций"}
             </span>
           </div>
         </div>
