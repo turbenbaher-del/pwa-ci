@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { apiFetch } from '../utils/api'
+import { apiFetch, friendlyError } from '../utils/api'
 import { formatCurrency } from '../utils/format'
 import type { Payment } from '../store/payments'
 
@@ -33,7 +33,7 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
       setSerial(data.serial || '')
       setStage('needKey')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Не удалось начать подпись')
+      setError(friendlyError(e, 'Не удалось начать подпись'))
       setStage('error')
     }
   }
@@ -59,7 +59,7 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
         setStage('needKey')
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка при отправке ключа')
+      setError(friendlyError(e, 'Ошибка при отправке ключа'))
       setStage('needKey')
     }
   }

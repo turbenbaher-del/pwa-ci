@@ -15,6 +15,24 @@ export function proxyUrl(path: string): string {
   return `${PROXY_URL}${path}`
 }
 
+/**
+ * Человекопонятный текст ошибки. Прячет сырые технические сообщения
+ * (playwright «page.waitForURL: Timeout …», стек, JSON) за общей фразой,
+ * но пропускает осмысленные ответы банка и прокси.
+ */
+export function friendlyError(e: unknown, fallback = 'Что-то пошло не так'): string {
+  const raw = e instanceof Error ? e.message : String(e ?? '')
+  if (!raw) return fallback
+  // Технический мусор — не показываем пользователю
+  if (/page\.\w+:|waitfor|timeout \d+ms|\bat \w+ \(|selector|locator|networkidle|ECONN|fetch failed/i.test(raw)) {
+    if (/timeout|waitfor|ECONN|fetch failed/i.test(raw)) {
+      return 'Банк не отвечает — вероятно, временное ограничение. Повторите через 1–2 минуты.'
+    }
+    return fallback
+  }
+  return raw
+}
+
 /** Запрос к прокси с авторизацией и разбором ошибок в человеческий текст. */
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const headers = authHeaders(options.headers)

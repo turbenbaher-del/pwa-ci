@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAccountsStore } from '../store/accounts'
-import { apiFetch } from '../utils/api'
+import { apiFetch, friendlyError } from '../utils/api'
 import { isDemo } from '../utils/demo'
 import { confirm } from '../store/confirm'
 import { formatCurrency, isAccountOpen, normalizeCurrency } from '../utils/format'
@@ -104,7 +104,7 @@ export function TransferPage() {
       }
       setAmount('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Ошибка при переводе')
+      setError(friendlyError(e, 'Не удалось выполнить перевод'))
     } finally {
       setBusy(false)
     }
