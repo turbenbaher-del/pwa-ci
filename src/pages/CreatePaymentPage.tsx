@@ -150,19 +150,20 @@ export function CreatePaymentPage() {
     clearError()
     if (!validate()) return
 
-    // Единый confirmation/подпись (перенос из Т: requestConfirmation → sign)
+    // Подпись здесь НЕ запрашиваем: этот банк подписывает ключом с токена и
+    // подтверждением в PayControl, а не кодом из SMS. Сохраняем документ, а
+    // подпись — отдельным шагом через окно ввода ключа на странице платежа.
     const amountFmt = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: formData.currency }).format(parseFloat(formData.amount))
     const res = await confirm({
-      title: 'Подписание платежа',
-      message: 'Проверьте реквизиты и подтвердите операцию кодом из SMS.',
+      title: 'Сохранить платёж?',
+      message: 'Документ будет сохранён в банке. Подписать его можно на странице платежа — ключом с токена.',
       details: [
         { label: 'Получатель', value: formData.recipientName },
         { label: 'Счёт', value: formData.recipientAccount },
         { label: 'Сумма', value: amountFmt },
         { label: 'Назначение', value: formData.purpose.slice(0, 60) + (formData.purpose.length > 60 ? '…' : '') },
       ],
-      requireCode: true,
-      confirmLabel: 'Подписать и отправить',
+      confirmLabel: 'Сохранить',
     })
     if (!res.ok) return
 

@@ -4,6 +4,7 @@ import { formatCurrency } from '../utils/format'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useEffect, useState } from 'react'
+import { SignModal } from '../components/SignModal'
 import '../styles/pages.css'
 
 const cardStyle = {
@@ -21,10 +22,8 @@ const fieldValue = { fontWeight: 500, fontSize: 'var(--text-sm)', color: 'var(--
 export function PaymentDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { getPaymentById, fetchPaymentById, signPayment, isLocalDraft } = usePaymentsStore()
-  const [showSignForm, setShowSignForm] = useState(false)
-  const [signMsg, setSignMsg] = useState('')
-  const [signing, setSigning] = useState(false)
+  const { getPaymentById, fetchPaymentById, fetchPayments } = usePaymentsStore()
+  const [showSignModal, setShowSignModal] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const payment = id ? getPaymentById(id) : undefined
@@ -46,24 +45,10 @@ export function PaymentDetailsPage() {
     )
   }
 
-  // Подписать можно только черновик из приложения: операции из выписки банка
-  // уже проведены и идентификатора документа в ДБО у них нет.
-  const canSign = isLocalDraft(payment.id)
-
-  const handleSign = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSigning(true)
-    try {
-      await signPayment(payment.id)
-      setShowSignForm(false)
-      setSignMsg('Платёж отправлен в банк на исполнение')
-    } catch (e) {
-      // Показываем причину от банка/прокси, а не общее «Ошибка»
-      setSignMsg(e instanceof Error ? e.message : 'Ошибка при подписании')
-    } finally {
-      setSigning(false)
-    }
-  }
+  // Подписать можно документ, ожидающий подписи: черновик или «на подпись».
+  // У документов из ДБО теперь есть идентификатор, поэтому подпись доступна
+  // и для них — через окно ввода ключа токена.
+  const canSign = payment.status === 'draft' || payment.status === 'created'
 
   return (
     <div className="page">
@@ -154,47 +139,28 @@ export function PaymentDetailsPage() {
           </div>
         )}
 
-        {/* Отправка на исполнение — только для черновика, созданного здесь */}
-        {canSign && payment.status !== 'sent' && payment.status !== 'executed' && (
+        {/* Подпись документа, ожидающего подписи */}
+        {canSign && (
           <div style={{ ...cardStyle, border: '1px solid rgba(254,114,0,0.3)', background: 'rgba(254,114,0,0.04)' }}>
-            {signMsg && <div className="alert alert-info" style={{ marginBottom: '1rem' }}>{signMsg}</div>}
-            {!showSignForm ? (
-              <button onClick={() => setShowSignForm(true)} className="btn btn-primary btn-block">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
-                </svg>
-                Подписать и отправить в банк
-              </button>
-            ) : (
-              <form onSubmit={handleSign}>
-                <div className="alert alert-warning" style={{ marginBottom: '1rem' }}>
-                  Платёж на {formatCurrency(Math.abs(payment.amount), payment.currency)} будет отправлен
-                  в банк на исполнение — деньги спишутся со счёта. Подтверждение подписи
-                  запросит сам банк.
-                </div>
-                <div className="flex" style={{ gap: '0.75rem' }}>
-                  <button type="submit" className="btn btn-primary flex-1" disabled={signing}>
-                    {signing ? <span className="spinner" /> : null} Отправить
-                  </button>
-                  <button type="button" onClick={() => setShowSignForm(false)} className="btn btn-secondary flex-1" disabled={signing}>
-                    Отмена
-                  </button>
-                </div>
-              </form>
-            )}
+            <button onClick={() => setShowSignModal(true)} className="btn btn-primary btn-block">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
+              </svg>
+              Подписать
+            </button>
+            <p style={{ margin: '0.75rem 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
+              Потребуется ключ с токена и подтверждение в PayControl на телефоне —
+              как в веб-версии банка.
+            </p>
           </div>
         )}
 
-        {/* Документ ждёт подписи, но пришёл из ДБО — подписать его отсюда нельзя */}
-        {!canSign && payment.status === 'created' && (
-          <div style={{ ...cardStyle, border: '1px solid rgba(254,114,0,0.3)', background: 'rgba(254,114,0,0.04)' }}>
-            <div style={{ ...fieldLabel, marginBottom: 6 }}>Ожидает подписи</div>
-            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--color-text)' }}>
-              Документ создан в ДБО. Подписать его из приложения нельзя: банк отдаёт такие
-              документы только как строки выписки, без идентификатора для подписания.
-              Подпишите его в веб-версии ДБО.
-            </p>
-          </div>
+        {showSignModal && (
+          <SignModal
+            payment={payment}
+            onClose={() => setShowSignModal(false)}
+            onSigned={() => fetchPayments()}
+          />
         )}
 
         {/* Timeline */}

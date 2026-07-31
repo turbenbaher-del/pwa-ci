@@ -1075,3 +1075,67 @@
 /* Номер не должен обрезаться из-за кнопки копирования рядом */
 .account-card-number { flex-wrap: wrap; }
 .account-card-number > span { font-size: var(--text-xs); }
+
+/* ─── ОКНО ПОДПИСИ ───────────────────────────────────────────────────────── */
+.sign-overlay {
+  position: fixed; inset: 0;
+  background: rgba(14, 16, 15, 0.5);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 300;
+  padding: 0;
+  backdrop-filter: blur(2px);
+}
+@media (min-width: 560px) {
+  .sign-overlay { align-items: center; padding: 1rem; }
+}
+.sign-modal {
+  background: var(--color-surface);
+  width: 100%; max-width: 440px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-5);
+  padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+  box-shadow: var(--shadow-lg);
+}
+@media (min-width: 560px) {
+  .sign-modal { border-radius: var(--radius-lg); }
+}
+.sign-modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-4); }
+.sign-modal-title { font-family: var(--font-primary); font-weight: 700; font-size: var(--text-md); }
+.sign-modal-close {
+  background: none; border: none; font-size: 1.6rem; line-height: 1;
+  color: var(--color-text-muted); cursor: pointer; padding: 0 0.25rem;
+}
+.sign-summary {
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.sign-summary-amount {
+  font-family: var(--font-primary); font-weight: 700; font-size: var(--text-2xl);
+  color: var(--color-text); font-variant-numeric: tabular-nums;
+}
+.sign-summary-line { font-size: var(--text-sm); color: var(--color-text); margin-top: 2px; }
+.sign-summary-purpose { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 4px; line-height: 1.4; }
+.sign-note { font-size: var(--text-sm); color: var(--color-text-secondary); line-height: 1.5; margin-bottom: var(--space-4); }
+.sign-field { margin-bottom: var(--space-4); }
+.sign-field label { display: block; font-size: var(--text-xs); color: var(--color-text-muted); margin-bottom: 4px; }
+.sign-serial {
+  font-family: var(--mono, monospace); font-size: var(--text-sm); font-weight: 600;
+  background: var(--color-bg); padding: 0.6rem 0.75rem; border-radius: var(--radius-sm);
+  letter-spacing: 0.04em;
+}
+.sign-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+.sign-status {
+  text-align: center; padding: var(--space-6) var(--space-4);
+  font-size: var(--text-sm); color: var(--color-text-secondary);
+  display: flex; flex-direction: column; align-items: center; gap: 0.5rem;
+}
+.sign-phone-icon, .sign-check {
+  width: 64px; height: 64px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 0.5rem;
+}
+.sign-phone-icon { background: var(--color-primary-light); color: var(--color-primary); }
+.sign-check { background: var(--color-primary); color: #fff; }
+.sign-done { color: var(--color-text); font-weight: 600; }
