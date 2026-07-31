@@ -114,6 +114,8 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           // Фактические статусы документов ДБО
           'СОЗДАН': 'created',
           'ПОДПИСАН': 'signed',
+          'ДОСТАВЛЕН': 'sent',       // подписан и доставлен в банк
+          'ПРИНЯТ': 'sent',
           'ОШИБКА КОНТРОЛЯ': 'rejected',
           'ОТМЕНЁН БАНКОМ': 'rejected', 'ОТМЕНЕН БАНКОМ': 'rejected',
           'ОТВЕРГНУТ БАНКОМ': 'rejected',
