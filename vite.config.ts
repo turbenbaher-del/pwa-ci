@@ -84,6 +84,11 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+        // Новая версия применяется сразу, без ожидания закрытия всех вкладок:
+        // иначе на телефоне неделями живёт старая сборка из кэша.
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         // Deep-link'и SPA (/payments/123) отдаём из index.html
         navigateFallback: `${BASE}index.html`,
         navigateFallbackDenylist: [/^\/api\//],
@@ -96,7 +101,11 @@ export default defineConfig({
             handler: 'NetworkFirst',
             options: {
               cacheName: 'dbo-api-cache',
-              networkTimeoutSeconds: 10,
+              // Прокси заходит в банк через браузер: вход и навигация занимают
+              // 40–90 секунд. С прежними 10 секундами service worker обрывал
+              // запрос и отдавал пустой кэш — на экране не было ни счетов,
+              // ни остатков.
+              networkTimeoutSeconds: 120,
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 300
