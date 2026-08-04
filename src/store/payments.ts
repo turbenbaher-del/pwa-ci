@@ -50,6 +50,8 @@ export interface PaymentFilters {
 export interface PaymentsState {
   payments: Payment[]
   loading: boolean
+  /** Документы (черновики) догружаются вторым этапом */
+  documentsLoading: boolean
   error: string | null
   filters: PaymentFilters
   fetchPayments: (filters?: PaymentFilters) => Promise<void>
@@ -69,6 +71,7 @@ export interface PaymentsState {
 export const usePaymentsStore = create<PaymentsState>((set, get) => ({
   payments: [],
   loading: false,
+  documentsLoading: false,
   error: null,
   filters: {},
 
@@ -93,12 +96,9 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
       // ПО ОЧЕРЕДИ (браузер один). Главной странице документы не нужны, поэтому
       // там их не запрашиваем: иначе экран ждёт лишние полторы минуты.
       const data = await apiFetch(`/api/payments?${params}`)
-      const docsResponse = filters?.withDocuments === false
-        ? { data: [] }
-        : await apiFetch('/api/documents').catch(() => ({ data: [] }))
       // API returns { success, data: [] } — handle both shapes
       const list = Array.isArray(data) ? data : (data.data ?? [])
-      const documents = docsResponse?.data ?? []
+      const documents: any[] = []
       const parseDate = (d: any) => {
         if (!d) return new Date()
         const s = String(d)
@@ -183,6 +183,46 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
         payments: [...fromDocuments, ...fromStatement],
         loading: false
       })
+
+      // Документы догружаем ВТОРЫМ этапом: это отдельный заход прокси в банк
+      // (ещё 60–90 секунд). Раньше список ждал оба запроса и до трёх минут
+      // выглядел пустым. Теперь операции видны сразу, черновики подтянутся.
+      if (filters?.withDocuments !== false) {
+        set({ documentsLoading: true })
+        apiFetch('/api/documents')
+          .then(res => {
+            const docs = res?.data ?? []
+            const extra: Payment[] = docs
+              .map((d: any) => ({ d, status: normalizeStatus(d.status ?? '') }))
+              .filter(({ status }: any) => status !== 'executed')
+              .map(({ d, status }: any) => ({
+                id: d.id,
+                number: d.number || undefined,
+                status,
+                amount: d.amount ?? 0,
+                currency: 'RUR',
+                date: new Date(),
+                recipient: { name: d.recipient || '', account: '', bank: '', bic: '' },
+                payer: { name: '', account: d.account || '' },
+                purpose: d.purpose || '',
+                priority: 'normal' as const,
+                commissionPayment: 'payer' as const,
+                account: d.account || undefined,
+                direction: 'out' as const,
+                details: { actions: d.actions ?? [], bankStatus: d.status, stateCode: d.stateCode },
+                createdAt: new Date(),
+                modifiedAt: new Date(),
+              }))
+            set(state => ({
+              payments: [...extra, ...state.payments.filter(p => p.status === 'executed')],
+              documentsLoading: false,
+            }))
+          })
+          .catch(e => {
+            // Раньше ошибка проглатывалась и экран просто оставался пустым
+            set({ documentsLoading: false, error: e instanceof Error ? e.message : 'Не удалось загрузить документы' })
+          })
+      }
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : 'Unknown error',

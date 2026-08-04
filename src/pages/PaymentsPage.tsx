@@ -25,7 +25,7 @@ const DIRECTION_FILTERS: { key: string; label: string }[] = [
 ]
 
 export function PaymentsPage() {
-  const { payments, fetchPayments, loading } = usePaymentsStore()
+  const { payments, fetchPayments, loading, documentsLoading } = usePaymentsStore()
   const [statusFilter, setStatusFilter] = useState('')
   const [directionFilter, setDirectionFilter] = useState('')
   const [search, setSearch] = useState('')
@@ -119,6 +119,15 @@ export function PaymentsPage() {
           />
         </div>
       </div>
+
+      {/* Черновики приходят отдельным запросом к банку — это ещё до полутора
+          минут. Без подсказки пустой список выглядит как сбой. */}
+      {documentsLoading && (
+        <div className="alert alert-info" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span className="spinner" />
+          Загружаем черновики и документы на подпись из банка…
+        </div>
+      )}
 
       {/* Content */}
       <div className="section">
