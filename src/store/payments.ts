@@ -37,6 +37,8 @@ export interface Payment {
 }
 
 export interface PaymentFilters {
+  /** false — не запрашивать документы (лишний заход в банк). Для главной. */
+  withDocuments?: boolean
   status?: string
   dateFrom?: Date
   dateTo?: Date
@@ -86,12 +88,14 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
       //  /api/payments   — проведённые операции, включая входящие поступления;
       //  /api/documents  — документы с идентификаторами банка и настоящими
       //                    статусами (черновики, на подпись, отклонённые).
-      // Выписка не содержит непроведённых документов, документы — входящих,
-      // поэтому берём и то, и другое.
-      const [data, docsResponse] = await Promise.all([
-        apiFetch(`/api/payments?${params}`),
-        apiFetch('/api/documents').catch(() => ({ data: [] })),
-      ])
+      //
+      // Каждый запрос — отдельный заход прокси в банк, и они выполняются
+      // ПО ОЧЕРЕДИ (браузер один). Главной странице документы не нужны, поэтому
+      // там их не запрашиваем: иначе экран ждёт лишние полторы минуты.
+      const data = await apiFetch(`/api/payments?${params}`)
+      const docsResponse = filters?.withDocuments === false
+        ? { data: [] }
+        : await apiFetch('/api/documents').catch(() => ({ data: [] }))
       // API returns { success, data: [] } — handle both shapes
       const list = Array.isArray(data) ? data : (data.data ?? [])
       const documents = docsResponse?.data ?? []

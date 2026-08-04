@@ -32,10 +32,10 @@ export const useAccountsStore = create<AccountsState>((set) => ({
   fetchAccounts: async () => {
     if (isDemo()) { set({ accounts: demoAccounts, loading: false, error: null }); return }
     set({ loading: true, error: null })
-    // Первый запрос после простоя банк может отдать «ещё загружается» (503) —
-    // список счетов кэшируется на прокси и появляется со второй попытки.
-    // Поэтому повторяем несколько раз, а не сдаёмся с пустым списком.
-    for (let attempt = 0; attempt < 4; attempt++) {
+    // Каждая попытка — отдельный заход прокси в банк (30–90 секунд), и они
+    // выполняются по очереди. Поэтому повторяем максимум один раз: раньше
+    // четыре попытки растягивали ожидание на минуты и грузили банк.
+    for (let attempt = 0; attempt < 2; attempt++) {
       try {
         const data = await apiFetch('/api/accounts')
         const list = data.data ?? data
@@ -44,14 +44,13 @@ export const useAccountsStore = create<AccountsState>((set) => ({
           return
         }
       } catch (err) {
-        // последняя попытка — покажем ошибку, иначе тихо повторим
-        if (attempt === 3) {
+        if (attempt === 1) {
           set({ error: err instanceof Error ? err.message : 'Ошибка загрузки', loading: false })
           return
         }
       }
-      await new Promise(r => setTimeout(r, 2500))
+      await new Promise(r => setTimeout(r, 2000))
     }
-    set({ loading: false })
+    set({ loading: false, error: 'Банк не вернул счета. Потяните экран вниз, чтобы повторить.' })
   },
 }))

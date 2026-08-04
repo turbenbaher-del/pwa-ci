@@ -22,8 +22,10 @@ export function DashboardPage() {
   const { accounts, loading: accountsLoading, fetchAccounts } = useAccountsStore()
 
   useEffect(() => {
-    fetchPayments()
+    // Сначала счета — это главное на экране. Документы здесь не нужны:
+    // каждый запрос к банку идёт по очереди, лишний добавляет ~90 секунд.
     fetchAccounts()
+    fetchPayments({ withDocuments: false })
   }, [fetchPayments, fetchAccounts])
 
   // Складываем только рубли: валютные остатки без курса суммировать нельзя
