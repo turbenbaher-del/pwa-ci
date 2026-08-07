@@ -24,6 +24,7 @@ export function TransferPage() {
   const [success, setSuccess] = useState('')
   // Созданный документ, который сразу предлагаем подписать
   const [created, setCreated] = useState<Payment | null>(null)
+  const [signedOk, setSignedOk] = useState(false)
   const { fetchPayments } = usePaymentsStore()
 
   useEffect(() => { fetchAccounts() }, [fetchAccounts])
@@ -212,9 +213,15 @@ export function TransferPage() {
           payment={created}
           onClose={() => {
             setCreated(null)
+            // Подписанный документ нельзя провожать советом «подпишите позже»
+            if (signedOk) { navigate('/payments'); return }
             setSuccess('Документ создан. Его можно подписать позже в «Платежах».')
           }}
-          onSigned={() => { fetchPayments(); setCreated(null); navigate('/payments') }}
+          // Успех НЕ закрывает окно: человек должен увидеть, что платёж
+          // подписан и ушёл в банк. Раньше здесь сбрасывался created, окно
+          // исчезало в тот же миг и результат было не разглядеть.
+          // Обновляем список молча, а закрытие — по кнопке.
+          onSigned={() => { setSignedOk(true); fetchPayments() }}
         />
       )}
     </div>

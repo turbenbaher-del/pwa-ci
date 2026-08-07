@@ -68,6 +68,22 @@ export interface PaymentsState {
   clearError: () => void
 }
 
+/**
+ * Свежие операции сверху — как в истории банка. Раньше сортировки не было
+ * вовсе: список шёл в том порядке, в каком его отдали банк и выписка, поэтому
+ * платежи выглядели перемешанными. При равных датах документ, ожидающий
+ * действия, показывается выше исполненного.
+ */
+const STATUS_WEIGHT: Record<string, number> = {
+  draft: 3, created: 3, signed: 2, approved: 2, sent: 1, rejected: 0, executed: 0,
+}
+const byDateDesc = (list: Payment[]): Payment[] =>
+  [...list].sort((a, b) => {
+    const diff = new Date(b.date).getTime() - new Date(a.date).getTime()
+    if (diff !== 0) return diff
+    return (STATUS_WEIGHT[b.status] ?? 0) - (STATUS_WEIGHT[a.status] ?? 0)
+  })
+
 export const usePaymentsStore = create<PaymentsState>((set, get) => ({
   payments: [],
   loading: false,
@@ -173,9 +189,9 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           status,
           amount: d.amount ?? 0,
           currency: 'RUR',
-          // Банк не отдаёт дату в списке документов — ставим текущую,
-          // чтобы непроведённые документы были наверху списка
-          date: new Date(),
+          // Настоящая дата документа из банка. Раньше сюда ставили текущую
+          // «чтобы было наверху» — и список шёл вперемешку, без истории.
+          date: parseDate(d.date),
           recipient: { name: d.recipient || '', account: '', bank: '', bic: '' },
           payer: { name: '', account: d.account || '' },
           purpose: d.purpose || '',
@@ -190,8 +206,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
         }))
 
       set({
-        // Непроведённые документы наверху — они требуют действия
-        payments: [...fromDocuments, ...fromStatement],
+        payments: byDateDesc([...fromDocuments, ...fromStatement]),
         loading: false
       })
 
@@ -212,7 +227,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
                 status,
                 amount: d.amount ?? 0,
                 currency: 'RUR',
-                date: new Date(),
+                date: parseDate(d.date),
                 recipient: { name: d.recipient || '', account: '', bank: '', bic: '' },
                 payer: { name: '', account: d.account || '' },
                 purpose: d.purpose || '',
@@ -225,7 +240,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
                 modifiedAt: new Date(),
               }))
             set(state => ({
-              payments: [...extra, ...state.payments.filter(p => p.status === 'executed')],
+              payments: byDateDesc([...extra, ...state.payments.filter(p => p.status === 'executed')]),
               documentsLoading: false,
             }))
           })
