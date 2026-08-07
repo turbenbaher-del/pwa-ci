@@ -77,6 +77,14 @@ export interface PaymentsState {
 const STATUS_WEIGHT: Record<string, number> = {
   draft: 3, created: 3, signed: 2, approved: 2, sent: 1, rejected: 0, executed: 0,
 }
+/**
+ * Ключ для сверки документа с операцией из выписки: номер и сумма. Дата не
+ * годится — у документа она своя (когда создан), у операции своя (когда
+ * проведена), и они расходятся.
+ */
+const statementKey = (number?: string, amount?: number): string =>
+  number ? `${String(number).trim()}|${Math.abs(Number(amount) || 0).toFixed(2)}` : ''
+
 const byDateDesc = (list: Payment[]): Payment[] =>
   [...list].sort((a, b) => {
     const diff = new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -181,11 +189,18 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           approvedAt: p.approvedAt ? parseDate(p.approvedAt) : undefined,
         }))
 
-      // Из документов берём только НЕпроведённые: исполненные уже есть
-      // в выписке, причём там богаче назначение и есть дата операции.
+      // Раньше исполненные документы отбрасывались: считалось, что они уже
+      // есть в выписке. Но выписка приходит только по ОДНОМУ счёту, а платёжки
+      // — по всем, поэтому проведённые платежи по остальным счетам пропадали
+      // из «Выполненных» вовсе. Берём документы целиком и отсеиваем лишь то,
+      // что действительно дублирует выписку.
+      const seen = new Set(
+        fromStatement.map(p => statementKey(p.number, p.amount)).filter(Boolean)
+      )
       const fromDocuments: Payment[] = documents
         .map((d: any) => ({ d, status: normalizeStatus(d.status ?? '') }))
-        .filter(({ status }: any) => status !== 'executed')
+        .filter(({ d, status }: any) =>
+          status !== 'executed' || !seen.has(statementKey(d.number, d.amount)))
         .map(({ d, status }: any) => ({
           id: d.id,
           number: d.number || undefined,
@@ -221,9 +236,15 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
         apiFetch('/api/documents')
           .then(res => {
             const docs = res?.data ?? []
+            // Исполненные документы тоже нужны: выписка приходит лишь по
+            // одному счёту, и без них «Выполненные» показывали не всё.
+            const known = new Set(
+              fromStatement.map(p => statementKey(p.number, p.amount)).filter(Boolean)
+            )
             const extra: Payment[] = docs
               .map((d: any) => ({ d, status: normalizeStatus(d.status ?? '') }))
-              .filter(({ status }: any) => status !== 'executed')
+              .filter(({ d, status }: any) =>
+                status !== 'executed' || !known.has(statementKey(d.number, d.amount)))
               .map(({ d, status }: any) => ({
                 id: d.id,
                 number: d.number || undefined,
