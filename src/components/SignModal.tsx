@@ -73,8 +73,10 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
     setStage('error')
   }
 
+  // Каждая проверка — это запрос в банк за состоянием документа, поэтому
+  // опрашиваем раз в пять секунд, а не чаще.
   const schedulePoll = () => {
-    pollTimer.current = window.setTimeout(pollStatus, 3000)
+    pollTimer.current = window.setTimeout(pollStatus, 5000)
   }
 
   const pollStatus = async () => {
