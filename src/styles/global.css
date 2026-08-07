@@ -660,3 +660,50 @@ img, svg { display: block; }
   h1 { font-size: var(--text-xl); }
   .btn { font-size: var(--text-xs); }
 }
+
+/* ─── ТЁМНАЯ ТЕМА ────────────────────────────────────────────────────────── */
+/* Класс dark вешается на <html> из App.tsx по настройке в профиле. Раньше
+   переключатель работал вхолостую: класс ставился, а правил для него не было.
+   Фирменный зелёный сохраняем — меняем только фон, поверхности и текст. */
+:root.dark {
+  color-scheme: dark;              /* системные поля и полосы прокрутки тоже тёмные */
+
+  --color-dark:          #E8EDEA;
+  --color-text:          #E8EDEA;
+  --color-text-secondary:#A8B3AE;
+  --color-text-muted:    #78837D;
+  --color-bg:            #0E1211;
+  --color-surface:       #171C1A;
+  --color-border:        #2A322E;
+  --color-border-light:  #222825;
+
+  --color-primary-light: rgba(80, 184, 72, 0.16);
+  --color-aqua:          #16211F;
+  --color-secondary:     #E8EDEA;
+
+  /* На тёмном фоне насыщенные оттенки режут глаз — берём мягче */
+  --color-error:         #FF6B7A;
+  --color-warning:       #FFA04D;
+  --color-info:          #4DA6FF;
+}
+
+/* Логотип и иллюстрации на белом фоне в тёмной теме смотрятся заплаткой */
+:root.dark img[src*="logo"],
+:root.dark .header-logo img { filter: brightness(1.08); }
+
+/* Тени на тёмном фоне почти не видны — усиливаем, чтобы карточки не сливались */
+:root.dark .card,
+:root.dark .an-card,
+:root.dark .form-section { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
+
+/* ─── РАЗМЕР ШРИФТА ──────────────────────────────────────────────────────── */
+/* Настройка тоже хранилась, но ни на что не влияла. Масштабируем всю шкалу,
+   а не один элемент, иначе вёрстка разъезжается. */
+:root.font-small {
+  --text-xs: 11px;  --text-sm: 13px;  --text-base: 14px; --text-md: 16px;
+  --text-lg: 18px;  --text-xl: 21px;  --text-2xl: 25px;  --text-3xl: 28px; --text-4xl: 35px;
+}
+:root.font-large {
+  --text-xs: 14px;  --text-sm: 16px;  --text-base: 18px; --text-md: 21px;
+  --text-lg: 23px;  --text-xl: 27px;  --text-2xl: 32px;  --text-3xl: 37px; --text-4xl: 46px;
+}

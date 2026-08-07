@@ -22,11 +22,23 @@ import { ConfirmModal } from './components/ConfirmModal'
 
 export function App() {
   const { isAuthenticated, isSessionConsistent, logout } = useAuthStore()
-  const { isDark } = useThemeStore()
+  const { isDark, fontSize } = useThemeStore()
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark)
+    // Тема влияет и на системные элементы: строку статуса в установленном
+    // приложении и цвет адресной строки браузера.
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', isDark ? '#0E1211' : '#50B848')
   }, [isDark])
+
+  // Размер шрифта хранился в настройках, но ни на что не влиял —
+  // масштабируем всю типографическую шкалу классом на <html>.
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle('font-small', fontSize === 'small')
+    root.classList.toggle('font-large', fontSize === 'large')
+  }, [fontSize])
 
   // Демо-личность поверх настоящих данных банка — признак прерванного входа.
   // На экране это выглядело как «Демо-компания ООО» с живыми счетами:
