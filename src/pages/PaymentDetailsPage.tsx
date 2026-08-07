@@ -192,6 +192,6 @@ function getStatusColor(status: string) {
   return m[status] ?? 'gray'
 }
 function getStatusLabel(status: string) {
-  const m: Record<string, string> = { draft: 'Черновик', created: 'Создан', signed: 'Подписан', sent: 'Отправлен', executed: 'Исполнен', rejected: 'Отклонён' }
+  const m: Record<string, string> = { draft: 'Создан', created: 'Частично подписан', signed: 'Подписан', sent: 'Отправлен', executed: 'Исполнен', rejected: 'Отклонён' }
   return m[status] ?? status
 }

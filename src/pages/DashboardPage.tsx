@@ -270,8 +270,8 @@ function getStatusColor(status: string): string {
 
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    draft: 'Черновик',
-    created: 'Создан',
+    draft: 'Создан',
+    created: 'Частично подписан',
     signed: 'Подписан',
     approved: 'Одобрен',
     sent: 'Отправлен',

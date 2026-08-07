@@ -32,10 +32,24 @@ export async function registerServiceWorker() {
       })
     })
 
-    // Handle controller change (update applied)
+    // Новый воркер встал у руля — ПЕРЕЗАГРУЖАЕМ страницу. Без этого на экране
+    // остаётся старая сборка: воркер обновился, а загруженный HTML и JS — нет.
+    // Именно поэтому на телефоне раз за разом открывалась прошлая версия.
+    let reloading = false
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      console.log('Service Worker updated')
+      if (reloading) return          // защита от петли перезагрузок
+      reloading = true
+      console.log('Service Worker updated — перезагружаем приложение')
+      window.location.reload()
     })
+
+    // Установленное на телефон приложение может не перезапускаться сутками.
+    // Проверяем обновления при возврате к приложению и раз в 5 минут.
+    const checkForUpdate = () => { registration.update().catch(() => {}) }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkForUpdate()
+    })
+    window.setInterval(checkForUpdate, 5 * 60 * 1000)
   } catch (error) {
     console.error('Service Worker registration failed:', error)
   }
