@@ -35,9 +35,26 @@ export async function registerServiceWorker() {
     // Новый воркер встал у руля — ПЕРЕЗАГРУЖАЕМ страницу. Без этого на экране
     // остаётся старая сборка: воркер обновился, а загруженный HTML и JS — нет.
     // Именно поэтому на телефоне раз за разом открывалась прошлая версия.
+    //
+    // Но перезагружать можно ТОЛЬКО при настоящем обновлении. При первой
+    // установке clientsClaim заставляет воркер захватить уже открытую страницу,
+    // и это же событие срабатывает на ровном месте. Перезагрузка тогда рвала
+    // идущие запросы к банку (счета грузятся до 40 секунд) — и экран оставался
+    // пустым. Поэтому смотрим, был ли контроллер ДО регистрации.
+    const hadController = !!navigator.serviceWorker.controller
     let reloading = false
     navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) {
+        console.log('Service Worker установлен впервые — перезагрузка не нужна')
+        return
+      }
       if (reloading) return          // защита от петли перезагрузок
+      // Идёт подпись — перезагрузка оборвала бы транзакцию с токеном и
+      // человек потерял бы попытку ввода ключа. Обновимся в другой раз.
+      if (document.querySelector('.sign-modal')) {
+        console.log('Идёт подпись — откладываем обновление')
+        return
+      }
       reloading = true
       console.log('Service Worker updated — перезагружаем приложение')
       window.location.reload()
