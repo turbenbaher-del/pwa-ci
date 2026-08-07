@@ -115,8 +115,11 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           'В ОБРАБОТКЕ': 'sent', 'sent': 'sent',
           'ОТКЛОНЕН': 'rejected', 'ОТКЛОНЁН': 'rejected', 'rejected': 'rejected',
           'signed': 'signed', 'approved': 'approved',
-          // Фактические статусы документов ДБО
-          'СОЗДАН': 'created',
+          // Фактические статусы документов ДБО. «Создан» — это черновик:
+          // в веб-ДБО такие документы лежат во вкладке «Черновики», а «На
+          // подпись» — уже частично подписанные. Раньше «Создан» уезжал в
+          // «На подпись», и во вкладке «Черновики» было пусто.
+          'СОЗДАН': 'draft',
           'ПОДПИСАН': 'signed',
           'ДОСТАВЛЕН': 'sent',       // подписан и доставлен в банк
           'ПРИНЯТ': 'sent',
@@ -127,7 +130,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           'ОТВЕРГНУТ БАНКОМ': 'rejected',
           'ЧАСТИЧНО ПОДПИСАН': 'created',
           // Английские коды из REST payorders/list (на случай без перевода)
-          'NEW': 'created', 'PROCESSED': 'executed', 'INPROCESS': 'sent',
+          'NEW': 'draft', 'PROCESSED': 'executed', 'INPROCESS': 'sent',
           'DELIVERED': 'sent', 'ACCEPTED': 'sent', 'PARTLYSIGNED': 'created',
           'DECLINEDBYABS': 'rejected', 'DECLINEDBYBANK': 'rejected',
           'INVALID': 'rejected', 'INVALIDSIGN': 'rejected', 'INVALIDPROPS': 'rejected',

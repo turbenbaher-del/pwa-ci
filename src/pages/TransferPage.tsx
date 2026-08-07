@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAccountsStore } from '../store/accounts'
+import { usePaymentsStore } from '../store/payments'
+import { SignModal } from '../components/SignModal'
+import type { Payment } from '../store/payments'
 import { apiFetch, friendlyError } from '../utils/api'
 import { isDemo } from '../utils/demo'
 import { formatCurrency, isAccountOpen, normalizeCurrency } from '../utils/format'
@@ -19,6 +22,9 @@ export function TransferPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  // Созданный документ, который сразу предлагаем подписать
+  const [created, setCreated] = useState<Payment | null>(null)
+  const { fetchPayments } = usePaymentsStore()
 
   useEffect(() => { fetchAccounts() }, [fetchAccounts])
 
@@ -46,12 +52,16 @@ export function TransferPage() {
       return 'Счета в разных валютах: такой перевод оформляется как валютная операция в ДБО'
     }
     if (!purpose.trim()) return 'Укажите назначение перевода'
+    // Банк отклоняет платёж, если в назначении нет упоминания НДС.
+    // Ловим это до отправки, чтобы не терять минуту на поход в банк.
+    if (!/ндс/i.test(purpose)) {
+      return 'В назначении нужно упомянуть НДС — например «НДС не облагается» или «Без НДС»'
+    }
     return ''
   }
 
-  // Перевод создаёт ДОКУМЕНТ. Подпись — отдельный шаг через окно ключа токена
-  // в разделе «Платежи»: подписать перевод на форме нельзя, банк требует
-  // интерактивный ключ eToken + подтверждение в PayControl.
+  // Перевод создаёт ДОКУМЕНТ, а затем сразу открывается подпись: банк требует
+  // подтверждение в PayControl и ключ с токена — оба фактора только у владельца.
   const send = async () => {
     const problem = validate()
     if (problem) { setError(problem); return }
@@ -78,7 +88,25 @@ export function TransferPage() {
         throw new Error(json.error || 'Банк не принял перевод')
       }
 
-      setSuccess('Документ создан. Чтобы деньги ушли — откройте его в «Платежах» и подпишите ключом токена.')
+      // Прокси возвращает id созданного документа — открываем подпись сразу,
+      // не заставляя искать платёж в списке.
+      const id = json.data?.id
+      if (id) {
+        setCreated({
+          id,
+          number: undefined,
+          status: 'draft',
+          amount: -amountValue,
+          currency: from!.currency,
+          date: new Date(),
+          recipient: { name: to!.name || `Счёт ${shortAccount(to!.number)}`, account: to!.number, bank: '', bic: '' },
+          payer: { name: '', account: from!.number },
+          purpose: purpose.trim(),
+        } as Payment)
+        setSuccess('')
+      } else {
+        setSuccess('Документ создан. Откройте его в «Платежах» и подпишите — иначе деньги не уйдут.')
+      }
       setAmount('')
     } catch (e) {
       setError(friendlyError(e, 'Не удалось создать перевод'))
@@ -167,17 +195,28 @@ export function TransferPage() {
         </div>
 
         <button className="btn btn-primary btn-block" onClick={send} disabled={busy}>
-          {busy ? <span className="spinner" /> : null} Создать перевод
+          {busy ? <span className="spinner" /> : null} Подписать и отправить
         </button>
         <p style={{ margin: '0.625rem 0 0', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 1.4 }}>
-          Документ появится в «Платежах». Чтобы деньги ушли, откройте его и
-          подпишите ключом с токена.
+          Документ создастся, и сразу откроется подпись: подтверждение в
+          PayControl и ключ с токена.
         </p>
 
         <button className="btn btn-ghost btn-block" style={{ marginTop: '0.75rem' }} onClick={() => navigate('/payments')} disabled={busy}>
           К списку платежей
         </button>
       </div>
+
+      {created && (
+        <SignModal
+          payment={created}
+          onClose={() => {
+            setCreated(null)
+            setSuccess('Документ создан. Его можно подписать позже в «Платежах».')
+          }}
+          onSigned={() => { fetchPayments(); setCreated(null); navigate('/payments') }}
+        />
+      )}
     </div>
   )
 }

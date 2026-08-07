@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { apiFetch, friendlyError } from '../utils/api'
 import { formatCurrency } from '../utils/format'
 import type { Payment } from '../store/payments'
@@ -9,53 +9,97 @@ interface SignModalProps {
   onSigned: () => void
 }
 
-type Stage = 'confirm' | 'starting' | 'needKey' | 'submitting' | 'waitingPayControl' | 'done' | 'error'
+// Порядок шагов повторяет сценарий банка (useSignAndSend в его фронте):
+//   intro → подтверждение в PayControl → ключ с токена → подпись и отправка.
+// Подтверждающая подпись идёт ПЕРВОЙ: банк выдаёт по ней confirmTransactionId,
+// без которого основная подпись ключом не принимается.
+type Stage =
+  | 'intro'          // сводка документа, кнопка «Продолжить»
+  | 'starting'       // запрашиваем у банка средства подписи
+  | 'payControl'     // ждём подтверждения в приложении на телефоне
+  | 'needKey'        // банк готов принять ключ с токена
+  | 'submitting'     // проверяем ключ и отправляем документ
+  | 'done'           // подписан и отправлен в банк
+  | 'signedNotSent'  // подписан, но отправка не прошла
+  | 'error'
 
-// Окно подписи документа. Повторяет двухфакторный процесс банка:
-// ключ с аппаратного токена eToken + подтверждение в PayControl на телефоне.
-// Оба фактора — только у владельца, приложение лишь ведёт по шагам.
 export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
-  const [stage, setStage] = useState<Stage>('confirm')
+  const [stage, setStage] = useState<Stage>('intro')
   const [serial, setSerial] = useState('')
+  const [attempts, setAttempts] = useState<number | undefined>()
   const [key, setKey] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+  const pollTimer = useRef<number | undefined>(undefined)
 
   const amount = formatCurrency(Math.abs(payment.amount), payment.currency)
+  const docPath = `/api/documents/${encodeURIComponent(payment.id)}`
 
-  // Шаг 1: отправить документ на подпись, получить серийник токена
+  // Опрос прекращаем при закрытии окна, иначе он продолжит стучать в банк
+  useEffect(() => () => { if (pollTimer.current) window.clearTimeout(pollTimer.current) }, [])
+
+  // Ответ банка одинаков у start и status — обрабатываем в одном месте
+  const applyStage = (data: any) => {
+    if (data.stage === 'needKey') {
+      setSerial(data.serial || '')
+      setAttempts(data.attempts)
+      setStage('needKey')
+      return
+    }
+    if (data.stage === 'confirm') {
+      setMessage(data.message || 'Подтвердите операцию в приложении PayControl')
+      setStage('payControl')
+      schedulePoll()
+      return
+    }
+    setError((data.errors || []).join('; ') || 'Банк не начал подпись')
+    setStage('error')
+  }
+
+  const schedulePoll = () => {
+    pollTimer.current = window.setTimeout(pollStatus, 3000)
+  }
+
+  const pollStatus = async () => {
+    try {
+      const { data } = await apiFetch(`${docPath}/sign/status`)
+      applyStage(data)
+    } catch {
+      // Разрыв связи не должен ронять подпись — пробуем ещё раз
+      schedulePoll()
+    }
+  }
+
   const start = async () => {
     setStage('starting'); setError('')
     try {
-      const { data } = await apiFetch(`/api/documents/${encodeURIComponent(payment.id)}/sign/start`, {
-        method: 'POST',
-      })
-      setSerial(data.serial || '')
-      setStage('needKey')
+      const { data } = await apiFetch(`${docPath}/sign/start`, { method: 'POST' })
+      applyStage(data)
     } catch (e) {
       setError(friendlyError(e, 'Не удалось начать подпись'))
       setStage('error')
     }
   }
 
-  // Шаг 2: отправить ключ с токена, дальше — подтверждение в PayControl
   const submitKey = async () => {
     if (!key.trim()) { setError('Введите ключ с токена'); return }
     setStage('submitting'); setError('')
     try {
-      const { data } = await apiFetch(`/api/documents/${encodeURIComponent(payment.id)}/sign/key`, {
+      const { data } = await apiFetch(`${docPath}/sign/key`, {
         method: 'POST',
         body: JSON.stringify({ key: key.trim() }),
       })
       if (data.stage === 'done') {
-        setMessage(data.message || 'Документ подписан')
+        setMessage(data.message || 'Документ подписан и отправлен в банк')
         setStage('done')
         onSigned()
-      } else if (data.stage === 'waitingPayControl') {
-        setMessage(data.message || 'Подтвердите операцию в приложении PayControl')
-        setStage('waitingPayControl')
+      } else if (data.stage === 'signed') {
+        setMessage(data.message || 'Документ подписан, но отправка не прошла')
+        setStage('signedNotSent')
+        onSigned()
       } else {
         setError((data.errors || []).join('; ') || 'Ключ не принят')
+        setKey('')
         setStage('needKey')
       }
     } catch (e) {
@@ -64,12 +108,14 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
     }
   }
 
+  const closable = stage === 'intro' || stage === 'error' || stage === 'done' || stage === 'signedNotSent'
+
   return (
-    <div className="sign-overlay" onClick={stage === 'confirm' ? onClose : undefined}>
+    <div className="sign-overlay" onClick={closable ? onClose : undefined}>
       <div className="sign-modal" onClick={e => e.stopPropagation()}>
         <div className="sign-modal-head">
           <span className="sign-modal-title">Подпись платежа</span>
-          {(stage === 'confirm' || stage === 'error' || stage === 'done') && (
+          {closable && (
             <button className="sign-modal-close" onClick={onClose} aria-label="Закрыть">×</button>
           )}
         </div>
@@ -81,11 +127,11 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
           {payment.purpose && <div className="sign-summary-purpose">{payment.purpose}</div>}
         </div>
 
-        {stage === 'confirm' && (
+        {stage === 'intro' && (
           <>
             <div className="sign-note">
-              Платёж будет отправлен в банк. Подтверждение — ключом с вашего токена
-              и в приложении PayControl на телефоне.
+              Платёж будет подписан и отправлен в банк. Потребуется подтверждение
+              в приложении PayControl и ключ с вашего токена.
             </div>
             <div className="sign-actions">
               <button className="btn btn-primary btn-block" onClick={start}>Продолжить</button>
@@ -96,6 +142,21 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
 
         {stage === 'starting' && (
           <div className="sign-status"><span className="spinner" /> Отправляем документ на подпись…</div>
+        )}
+
+        {stage === 'payControl' && (
+          <div className="sign-status sign-paycontrol">
+            <div className="sign-phone-icon">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <rect x="5" y="2" width="14" height="20" rx="2" /><path d="M12 18h.01" />
+              </svg>
+            </div>
+            {message}
+            <div className="form-hint" style={{ marginTop: '0.5rem' }}>
+              Как подтвердите — здесь откроется ввод ключа с токена
+            </div>
+            <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={onClose}>Отмена</button>
+          </div>
         )}
 
         {stage === 'needKey' && (
@@ -117,31 +178,21 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
                 placeholder="Код с устройства"
                 autoFocus
               />
-              <div className="form-hint">Нажмите кнопку на токене и введите показанный код</div>
+              <div className="form-hint">
+                Нажмите кнопку на токене и введите показанный код
+                {attempts ? `. Попыток до блокировки: ${attempts}` : ''}
+              </div>
             </div>
             {error && <div className="alert alert-danger" style={{ marginBottom: '0.75rem' }}>{error}</div>}
             <div className="sign-actions">
-              <button className="btn btn-primary btn-block" onClick={submitKey}>Подписать</button>
+              <button className="btn btn-primary btn-block" onClick={submitKey}>Подписать и отправить</button>
               <button className="btn btn-ghost btn-block" onClick={onClose}>Отмена</button>
             </div>
           </>
         )}
 
         {stage === 'submitting' && (
-          <div className="sign-status"><span className="spinner" /> Проверяем ключ…</div>
-        )}
-
-        {stage === 'waitingPayControl' && (
-          <div className="sign-status sign-paycontrol">
-            <div className="sign-phone-icon">
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                <rect x="5" y="2" width="14" height="20" rx="2" /><path d="M12 18h.01" />
-              </svg>
-            </div>
-            {message}
-            <div className="form-hint" style={{ marginTop: '0.5rem' }}>Окно можно закрыть — статус обновится в списке платежей</div>
-            <button className="btn btn-secondary btn-block" style={{ marginTop: '1rem' }} onClick={() => { onSigned(); onClose() }}>Готово</button>
-          </div>
+          <div className="sign-status"><span className="spinner" /> Подписываем и отправляем в банк…</div>
         )}
 
         {stage === 'done' && (
@@ -156,11 +207,26 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
           </div>
         )}
 
+        {/* Подпись прошла, а отправка нет — документ остался в банке неотправленным.
+            Молчать об этом нельзя: человек будет думать, что деньги ушли. */}
+        {stage === 'signedNotSent' && (
+          <>
+            <div className="alert alert-danger">{message}</div>
+            <div className="sign-note">
+              Документ подписан и лежит в банке. Отправьте его повторно из списка
+              платежей или в веб-версии ДБО.
+            </div>
+            <div className="sign-actions">
+              <button className="btn btn-primary btn-block" onClick={onClose}>Закрыть</button>
+            </div>
+          </>
+        )}
+
         {stage === 'error' && (
           <>
             <div className="alert alert-danger">{error}</div>
             <div className="sign-actions">
-              <button className="btn btn-secondary btn-block" onClick={() => setStage('confirm')}>Назад</button>
+              <button className="btn btn-secondary btn-block" onClick={() => setStage('intro')}>Назад</button>
               <button className="btn btn-ghost btn-block" onClick={onClose}>Закрыть</button>
             </div>
           </>
