@@ -139,6 +139,8 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           'ПОДПИСАН': 'signed',
           'ДОСТАВЛЕН': 'sent',       // подписан и доставлен в банк
           'ПРИНЯТ': 'sent',
+          'ПРИНЯТ БАНКОМ': 'sent',      // принят к исполнению, но ещё не проведён
+          'ПЕРЕДАН В БАНК': 'sent',
           'ОШИБКА КОНТРОЛЯ': 'rejected',
           'ОШИБКА ПОДПИСИ': 'rejected', 'ОШИБКА РЕКВИЗИТОВ': 'rejected',
           'ОТМЕНЁН БАНКОМ': 'rejected', 'ОТМЕНЕН БАНКОМ': 'rejected',
@@ -148,6 +150,7 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           // Английские коды из REST payorders/list (на случай без перевода)
           'NEW': 'draft', 'PROCESSED': 'executed', 'INPROCESS': 'sent',
           'DELIVERED': 'sent', 'ACCEPTED': 'sent', 'PARTLYSIGNED': 'created',
+          'ACCEPTEDBYABS': 'sent', 'SENTTOABS': 'sent',
           'DECLINEDBYABS': 'rejected', 'DECLINEDBYBANK': 'rejected',
           'INVALID': 'rejected', 'INVALIDSIGN': 'rejected', 'INVALIDPROPS': 'rejected',
         }

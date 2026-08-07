@@ -6,16 +6,25 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import '../styles/pages.css'
 
-// Фильтры статусов — как в веб-ДБО: Все, Выполненные, Черновики, На подпись,
-// В обработке, Отклонённые.
-const STATUS_FILTERS: { key: string; label: string }[] = [
-  { key: '',          label: 'Все' },
-  { key: 'executed',  label: 'Выполненные' },
-  { key: 'draft',     label: 'Черновики' },
-  { key: 'created',   label: 'На подпись' },
-  { key: 'sent',      label: 'В обработке' },
-  { key: 'rejected',  label: 'Отклонённые' },
+// Фильтры статусов — как в веб-ДБО. Одна вкладка может покрывать несколько
+// состояний: подписанный и принятый банком документ для человека — это
+// «В обработке», отдельной вкладки для них в банке тоже нет.
+// Раньше вкладки сверялись со статусом один в один, и подписанные платежи
+// не попадали никуда, кроме «Все» — их было просто не найти.
+const STATUS_FILTERS: { key: string; label: string; match: string[] }[] = [
+  { key: '',          label: 'Все',          match: [] },
+  { key: 'executed',  label: 'Выполненные',  match: ['executed'] },
+  { key: 'draft',     label: 'Черновики',    match: ['draft'] },
+  { key: 'created',   label: 'На подпись',   match: ['created'] },
+  { key: 'sent',      label: 'В обработке',  match: ['sent', 'signed', 'approved'] },
+  { key: 'rejected',  label: 'Отклонённые',  match: ['rejected'] },
 ]
+
+const matchesStatus = (key: string, status: string) => {
+  if (!key) return true
+  const f = STATUS_FILTERS.find(x => x.key === key)
+  return f ? f.match.includes(status) : status === key
+}
 
 // Направление операции — тоже отдельный фильтр в ДБО
 const DIRECTION_FILTERS: { key: string; label: string }[] = [
@@ -48,7 +57,7 @@ export function PaymentsPage() {
   }
 
   const filteredPayments = payments.filter(p => {
-    if (statusFilter && p.status !== statusFilter) return false
+    if (!matchesStatus(statusFilter, p.status)) return false
     if (directionFilter === 'in' && !isIncoming(p)) return false
     if (directionFilter === 'out' && isIncoming(p)) return false
     return matchesSearch(p)
@@ -57,7 +66,7 @@ export function PaymentsPage() {
   // Счётчики на чипах: сразу видно, есть ли документы на подпись
   const statusCount = (key: string) =>
     payments.filter(p => {
-      if (key && p.status !== key) return false
+      if (!matchesStatus(key, p.status)) return false
       if (directionFilter === 'in' && !isIncoming(p)) return false
       if (directionFilter === 'out' && isIncoming(p)) return false
       return matchesSearch(p)
@@ -164,7 +173,10 @@ export function PaymentsPage() {
                   </div>
                   <div style={{ marginLeft: '0.75rem', flexShrink: 0 }}>
                     <span className={`badge badge-${getStatusColor(payment.status)}`}>
-                      {getStatusLabel(payment.status)}
+                      {/* Точное слово банка, если оно есть: «Подписан» и
+                          «Принят банком» — разные вещи, а обобщённое
+                          «Отправлен» стирало эту разницу */}
+                      {payment.details?.bankStatus || getStatusLabel(payment.status)}
                     </span>
                   </div>
                 </Link>
