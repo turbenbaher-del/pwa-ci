@@ -19,6 +19,7 @@ type Stage =
   | 'payControl'     // ждём подтверждения в приложении на телефоне
   | 'needKey'        // банк готов принять ключ с токена
   | 'submitting'     // проверяем ключ и отправляем документ
+  | 'sync'           // попытки исчерпаны, токен просит синхронизацию двумя ключами
   | 'done'           // подписан и отправлен в банк
   | 'signedNotSent'  // подписан, но отправка не прошла
   | 'error'
@@ -28,6 +29,9 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
   const [serial, setSerial] = useState('')
   const [attempts, setAttempts] = useState<number | undefined>()
   const [key, setKey] = useState('')
+  const [firstKey, setFirstKey] = useState('')
+  const [secondKey, setSecondKey] = useState('')
+  const [qrCode, setQrCode] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const pollTimer = useRef<number | undefined>(undefined)
@@ -48,8 +52,21 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
     }
     if (data.stage === 'confirm') {
       setMessage(data.message || 'Подтвердите операцию в приложении PayControl')
+      if (data.qrCode) setQrCode(data.qrCode)
       setStage('payControl')
       schedulePoll()
+      return
+    }
+    if (data.stage === 'sync') {
+      setSerial(data.serial || serial)
+      setError((data.errors || []).join('; '))
+      setStage('sync')
+      return
+    }
+    if (data.stage === 'done' || data.stage === 'signed') {
+      setMessage(data.message || 'Документ подписан')
+      setStage(data.stage === 'done' ? 'done' : 'signedNotSent')
+      onSigned()
       return
     }
     setError((data.errors || []).join('; ') || 'Банк не начал подпись')
@@ -97,6 +114,12 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
         setMessage(data.message || 'Документ подписан, но отправка не прошла')
         setStage('signedNotSent')
         onSigned()
+      } else if (data.stage === 'sync') {
+        // Попытки ввода ключа кончились. Банк даёт последний шанс:
+        // два ключа подряд, чтобы синхронизировать счётчик токена.
+        setKey('')
+        setError((data.errors || []).join('; '))
+        setStage('sync')
       } else if (data.stage === 'confirm') {
         // Ключ приняли — это была подтверждающая подпись. Теперь основная:
         // банк ждёт подтверждения в приложении PayControl на телефоне.
@@ -112,6 +135,22 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
     } catch (e) {
       setError(friendlyError(e, 'Ошибка при отправке ключа'))
       setStage('needKey')
+    }
+  }
+
+  const syncToken = async () => {
+    if (!firstKey.trim() || !secondKey.trim()) { setError('Введите оба ключа'); return }
+    setStage('submitting'); setError('')
+    try {
+      const { data } = await apiFetch(`${docPath}/sign/sync`, {
+        method: 'POST',
+        body: JSON.stringify({ firstKey: firstKey.trim(), secondKey: secondKey.trim() }),
+      })
+      setFirstKey(''); setSecondKey('')
+      applyStage(data)
+    } catch (e) {
+      setError(friendlyError(e, 'Синхронизация не прошла'))
+      setStage('sync')
     }
   }
 
@@ -168,8 +207,18 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
               </svg>
             </div>
             {message}
+            {/* Банк отдаёт QR на случай, если запрос не пришёл в приложение сам:
+                его можно отсканировать в «Центр-инвест Бизнес». */}
+            {qrCode && (
+              <img
+                src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
+                alt="QR-код для подтверждения в PayControl"
+                style={{ display: 'block', width: 200, height: 200, margin: '0.75rem auto 0', imageRendering: 'pixelated' }}
+              />
+            )}
             <div className="form-hint" style={{ marginTop: '0.5rem' }}>
-              Как подтвердите — документ уйдёт в банк, и здесь появится результат
+              Откройте «Центр-инвест Бизнес» → PayControl → «Подтвердить операцию».
+              Как подтвердите — документ уйдёт в банк, и здесь появится результат.
             </div>
             <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={abort}>Отмена</button>
           </div>
@@ -209,6 +258,51 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
 
         {stage === 'submitting' && (
           <div className="sign-status"><span className="spinner" /> Подписываем и отправляем в банк…</div>
+        )}
+
+        {/* Попытки ввода ключа исчерпаны. Банк не блокирует токен сразу, а
+            предлагает синхронизацию: два ключа подряд, чтобы счётчик устройства
+            снова совпал с банковским. Это последний шанс — при неверных ключах
+            банк закроет доступ. */}
+        {stage === 'sync' && (
+          <>
+            <div className="alert alert-warning" style={{ marginBottom: '0.75rem' }}>
+              Требуется синхронизация токена. Нажмите кнопку на устройстве два
+              раза подряд и введите оба показанных ключа.
+            </div>
+            {error && <div className="alert alert-danger" style={{ marginBottom: '0.75rem' }}>{error}</div>}
+            {serial && (
+              <div className="sign-field">
+                <label>Серийный номер токена</label>
+                <div className="sign-serial">{serial}</div>
+              </div>
+            )}
+            <div className="sign-field">
+              <label>Первый ключ</label>
+              <input
+                type="text" inputMode="numeric" autoComplete="off" autoFocus
+                value={firstKey}
+                onChange={e => setFirstKey(e.target.value.replace(/\s/g, ''))}
+                placeholder="Первый код с устройства"
+              />
+            </div>
+            <div className="sign-field">
+              <label>Второй ключ</label>
+              <input
+                type="text" inputMode="numeric" autoComplete="off"
+                value={secondKey}
+                onChange={e => setSecondKey(e.target.value.replace(/\s/g, ''))}
+                placeholder="Второй код с устройства"
+              />
+              <div className="form-hint">
+                Если ключи не подойдут, банк заблокирует доступ — вводите внимательно
+              </div>
+            </div>
+            <div className="sign-actions">
+              <button className="btn btn-primary btn-block" onClick={syncToken}>Синхронизировать</button>
+              <button className="btn btn-ghost btn-block" onClick={abort}>Отмена</button>
+            </div>
+          </>
         )}
 
         {stage === 'done' && (
