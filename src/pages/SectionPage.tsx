@@ -99,7 +99,21 @@ export function SectionPage() {
             </div>
           )}
 
-          {data.fields.length === 0 && (
+          {/* Часть разделов банк в новом интерфейсе не показывает вовсе —
+              вместо данных отдаёт предложение уйти в классический ДБО.
+              Честно говорим об этом, а не делаем вид, что раздел пустой. */}
+          {data.fields.length === 0 && /стандартн\w* интерфейс/i.test(data.screenText || '') && (
+            <div className="an-card">
+              <div className="an-card-title">Раздел доступен только в классическом ДБО</div>
+              <div className="an-empty" style={{ textAlign: 'left', lineHeight: 1.5 }}>
+                Банк не отдаёт «{meta.title}» в новом интерфейсе и сам предлагает
+                перейти в стандартный. Приложение берёт данные из нового
+                интерфейса, поэтому показать здесь нечего.
+              </div>
+            </div>
+          )}
+
+          {data.fields.length === 0 && !/стандартн\w* интерфейс/i.test(data.screenText || '') && (
             <div className="an-card">
               <div className="an-card-title">Раздел открыт, структурных данных банк не отдал</div>
               {data.screenText ? (

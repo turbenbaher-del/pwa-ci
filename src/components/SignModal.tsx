@@ -117,6 +117,15 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
 
   const closable = stage === 'intro' || stage === 'error' || stage === 'done' || stage === 'signedNotSent'
 
+  // Бросили подпись на полпути — гасим начатую операцию в банке, иначе она
+  // останется висеть и помешает подписать документ заново.
+  const abort = () => {
+    if (stage === 'payControl' || stage === 'needKey') {
+      apiFetch(`${docPath}/sign/cancel`, { method: 'POST' }).catch(() => {})
+    }
+    onClose()
+  }
+
   return (
     <div className="sign-overlay" onClick={closable ? onClose : undefined}>
       <div className="sign-modal" onClick={e => e.stopPropagation()}>
@@ -137,8 +146,8 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
         {stage === 'intro' && (
           <>
             <div className="sign-note">
-              Платёж будет подписан и отправлен в банк. Потребуется подтверждение
-              в приложении PayControl и ключ с вашего токена.
+              Платёж будет подписан и отправлен в банк. Сначала ключ с вашего
+              токена, затем подтверждение в приложении PayControl.
             </div>
             <div className="sign-actions">
               <button className="btn btn-primary btn-block" onClick={start}>Продолжить</button>
@@ -160,9 +169,9 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
             </div>
             {message}
             <div className="form-hint" style={{ marginTop: '0.5rem' }}>
-              Как подтвердите — здесь откроется ввод ключа с токена
+              Как подтвердите — документ уйдёт в банк, и здесь появится результат
             </div>
-            <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={onClose}>Отмена</button>
+            <button className="btn btn-ghost btn-block" style={{ marginTop: '1rem' }} onClick={abort}>Отмена</button>
           </div>
         )}
 
@@ -193,7 +202,7 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
             {error && <div className="alert alert-danger" style={{ marginBottom: '0.75rem' }}>{error}</div>}
             <div className="sign-actions">
               <button className="btn btn-primary btn-block" onClick={submitKey}>Подписать и отправить</button>
-              <button className="btn btn-ghost btn-block" onClick={onClose}>Отмена</button>
+              <button className="btn btn-ghost btn-block" onClick={abort}>Отмена</button>
             </div>
           </>
         )}
