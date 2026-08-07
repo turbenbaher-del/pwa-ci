@@ -97,6 +97,13 @@ export function SignModal({ payment, onClose, onSigned }: SignModalProps) {
         setMessage(data.message || 'Документ подписан, но отправка не прошла')
         setStage('signedNotSent')
         onSigned()
+      } else if (data.stage === 'confirm') {
+        // Ключ приняли — это была подтверждающая подпись. Теперь основная:
+        // банк ждёт подтверждения в приложении PayControl на телефоне.
+        setKey('')
+        setMessage(data.message || 'Подтвердите операцию в приложении PayControl')
+        setStage('payControl')
+        schedulePoll()
       } else {
         setError((data.errors || []).join('; ') || 'Ключ не принят')
         setKey('')
