@@ -16,6 +16,7 @@ import { ContractorsPage } from './pages/ContractorsPage'
 import { StatementsPage } from './pages/StatementsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { TariffsPage } from './pages/TariffsPage'
+import { AuditPage } from './pages/AuditPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
 import { ConfirmModal } from './components/ConfirmModal'
@@ -77,6 +78,7 @@ export function App() {
           <Route path="/sections/:key" element={<SectionPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/audit" element={<AuditPage />} />
         </Route>
 
         <Route path="*" element={<Navigate to="/" />} />

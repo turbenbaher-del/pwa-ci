@@ -97,15 +97,25 @@ export function SettingsPage() {
               «Центр-инвест». Приложение работает через ваш вход в ДБО и своих
               паролей не хранит.
             </div>
-            <a
-              href="https://dbo.centrinvest.ru/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary btn-sm"
-              style={{ marginTop: '0.875rem', textDecoration: 'none', display: 'inline-flex' }}
-            >
-              Открыть ДБО
-            </a>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.875rem' }}>
+              <a
+                href="https://dbo.centrinvest.ru/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary btn-sm"
+                style={{ textDecoration: 'none', display: 'inline-flex' }}
+              >
+                Открыть ДБО
+              </a>
+              {/* Журнал нужен, когда что-то пошло не так: видно, что делалось
+                  и что ответил банк. Секретов в нём нет. */}
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => navigate('/audit')}
+              >
+                Журнал действий
+              </button>
+            </div>
 
             <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
               <span style={labelStyle}>Подтверждение операций</span>
