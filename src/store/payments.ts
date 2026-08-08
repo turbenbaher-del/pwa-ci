@@ -119,9 +119,22 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
       // Каждый запрос — отдельный заход прокси в банк, и они выполняются
       // ПО ОЧЕРЕДИ (браузер один). Главной странице документы не нужны, поэтому
       // там их не запрашиваем: иначе экран ждёт лишние полторы минуты.
-      const data = await apiFetch(`/api/payments?${params}`)
-      // API returns { success, data: [] } — handle both shapes
-      const list = Array.isArray(data) ? data : (data.data ?? [])
+      // Операции берём из /api/operations: он отдаёт историю по ВСЕМ счетам.
+      // Прежний /api/payments разбирал выписку, а она приходит только по
+      // одному счёту — из-за этого часть исполненных платежей не показывалась.
+      // Если новый источник почему-то не ответил, откатываемся на старый:
+      // лучше неполная история, чем пустой экран.
+      let list: any[] = []
+      try {
+        const ops = await apiFetch('/api/operations?limit=300')
+        list = ops.data ?? []
+      } catch (e) {
+        console.warn('operations недоступны, беру выписку', e)
+      }
+      if (!list.length) {
+        const data = await apiFetch(`/api/payments?${params}`)
+        list = Array.isArray(data) ? data : (data.data ?? [])
+      }
       const documents: any[] = []
       const parseDate = (d: any) => {
         if (!d) return new Date()
@@ -173,9 +186,13 @@ export const usePaymentsStore = create<PaymentsState>((set, get) => ({
           amount: p.amount ?? 0,
           currency: p.currency ?? 'RUR',
           date: parseDate(p.date ?? p.createdAt),
-          recipient: typeof p.recipient === 'string'
-            ? { name: p.recipient, account: '', bank: '', bic: '' }
-            : (p.recipient ?? { name: '', account: '', bank: '', bic: '' }),
+          recipient: p.counterparty
+            ? { name: p.counterparty.name || '', account: p.counterparty.account || '',
+                bank: p.counterparty.bank || '', bic: p.counterparty.bic || '',
+                inn: p.counterparty.inn || undefined }
+            : (typeof p.recipient === 'string'
+              ? { name: p.recipient, account: '', bank: '', bic: '' }
+              : (p.recipient ?? { name: '', account: '', bank: '', bic: '' })),
           payer: p.payer ?? { name: '', account: '' },
           purpose: p.purpose ?? p.number ?? '',
           priority: p.priority ?? 'normal',

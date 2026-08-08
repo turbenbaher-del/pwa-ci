@@ -16,6 +16,7 @@ import { ContractorsPage } from './pages/ContractorsPage'
 import { StatementsPage } from './pages/StatementsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { TariffsPage } from './pages/TariffsPage'
+import { MailPage } from './pages/MailPage'
 import { AuditPage } from './pages/AuditPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { NotificationsPage } from './pages/NotificationsPage'
@@ -78,6 +79,7 @@ export function App() {
           <Route path="/sections/:key" element={<SectionPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/mail" element={<MailPage />} />
           <Route path="/audit" element={<AuditPage />} />
         </Route>
 
