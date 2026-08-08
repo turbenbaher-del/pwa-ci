@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { apiFetch } from '../utils/api'
 import { useAccountsStore } from '../store/accounts'
 import { formatCurrency, isAccountOpen, accountStatusLabel, sumRubleBalance, normalizeCurrency } from '../utils/format'
 import '../styles/pages.css'
@@ -31,6 +32,8 @@ function AccountSkeleton() {
 export function AccountsPage() {
   const { accounts, loading, error, fetchAccounts } = useAccountsStore()
   const [copied, setCopied] = useState<string | null>(null)
+  const [reqBusy, setReqBusy] = useState('')
+  const [reqError, setReqError] = useState('')
 
   useEffect(() => {
     fetchAccounts()
@@ -45,8 +48,42 @@ export function AccountsPage() {
   const totalRub = sumRubleBalance(accounts)
   const openCount = accounts.filter(a => isAccountOpen(a.status)).length
 
+  // Реквизиты: собираем текстом и отдаём системе — на телефоне откроется
+  // выбор мессенджера, на компьютере просто копируется.
+  const shareRequisites = async (account: string) => {
+    setReqBusy(account); setReqError('')
+    try {
+      const res = await apiFetch(`/api/requisites?account=${encodeURIComponent(account)}`)
+      const r = res.data
+      const text = [
+        `Получатель: ${r.orgName}`,
+        r.inn ? `ИНН: ${r.inn}` : '',
+        `Счёт: ${r.account}`,
+        `Банк: ${r.bankName}`,
+        `БИК: ${r.bic}`,
+        r.corrAccount ? `Корр. счёт: ${r.corrAccount}` : '',
+      ].filter(Boolean).join('\n')
+
+      if (navigator.share) {
+        await navigator.share({ title: 'Реквизиты счёта', text })
+      } else {
+        await navigator.clipboard.writeText(text)
+        setReqError('')
+        window.alert('Реквизиты скопированы:\n\n' + text)
+      }
+    } catch (e) {
+      // Отмену выбора приложения ошибкой не считаем
+      if (e instanceof Error && e.name === 'AbortError') return
+      setReqError(e instanceof Error ? e.message : 'Не удалось получить реквизиты')
+    } finally {
+      setReqBusy('')
+    }
+  }
+
   return (
     <div className="page">
+      {reqError && <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>{reqError}</div>}
+
       <div className="page-header">
         <div>
           <h1 className="page-title">Счета</h1>
@@ -152,6 +189,17 @@ export function AccountsPage() {
                     {normalizeCurrency(acc.currency)}
                     {acc.seizureNotice ? ' · под арестом' : ''}
                   </div>
+                  {/* Реквизиты просят постоянно, и собирать их вручную —
+                      главный источник опечаток в чужих платёжках */}
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ marginTop: '0.5rem' }}
+                    onClick={e => { e.stopPropagation(); shareRequisites(acc.number) }}
+                    disabled={reqBusy === acc.number}
+                  >
+                    {reqBusy === acc.number ? <span className="spinner" /> : null}
+                    Реквизиты
+                  </button>
                 </div>
 
                 <div className="account-card-right">
