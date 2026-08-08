@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <!-- viewport-fit=cover обязателен, иначе env(safe-area-inset-*) на iPhone всегда 0 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="ДБО Центр-инвест — интернет-банк для бизнеса: счета, платежи, выписки">
+  <meta name="format-detection" content="telephone=no">
+
+  <!-- Цвет системной строки: брендовый зелёный (Брендбук v1.0.1) -->
+  <meta name="theme-color" content="#50B848">
+
+  <!-- iOS: standalone-режим, заголовок на домашнем экране, статус-бар -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Центр-инвест">
+
+  <link rel="icon" type="image/svg+xml" href="/pwa-ci/favicon.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/pwa-ci/favicon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/pwa-ci/apple-touch-icon.png">
+
+  <!-- Splash-экраны iOS: без них запуск с домашнего экрана даёт белую вспышку -->
+  <link rel="apple-touch-startup-image" href="/pwa-ci/splash-1290x2796.png"
+        media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/pwa-ci/splash-1179x2556.png"
+        media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/pwa-ci/splash-1170x2532.png"
+        media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/pwa-ci/splash-1125x2436.png"
+        media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
+  <link rel="apple-touch-startup-image" href="/pwa-ci/splash-750x1334.png"
+        media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+
+  <!-- Шрифты брендбука: Montserrat (заголовки) + Roboto (текст) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+  <title>ДБО Центр-инвест</title>
+
+  <style>
+    /* Критический минимум до загрузки основного CSS — чтобы не мигало не-брендовыми цветами */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body, #root { width: 100%; height: 100%; }
+    /* Высота по видимой части экрана: с адресной строкой браузера
+       100% давало полотно выше экрана и уводило нижнюю панель вниз */
+    body, #root { height: 100dvh; }
+
+    /* Фон тянем и на html — иначе в standalone под системными областями белые полосы */
+    html { background-color: #F4FDFB; }
+
+    body {
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #F4FDFB;
+      color: #0E100F;
+      /* Общих паддингов нет: safe-area учитывается точечно — в шапке и нижней навигации */
+      overscroll-behavior-y: none;
+    }
+  </style>
+  <script type="module" crossorigin src="/pwa-ci/assets/index-bd94fe03.js"></script>
+  <link rel="stylesheet" href="/pwa-ci/assets/index-5b2e683f.css">
+<link rel="manifest" href="/pwa-ci/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/pwa-ci/registerSW.js"></script></head>
+<body>
+  <div id="root"></div>
+  
+</body>
+</html>
