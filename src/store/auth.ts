@@ -22,6 +22,8 @@ export interface AuthState {
   login: (login: string, password: string) => Promise<void>
   loginDemo: () => void
   logout: () => void
+  /** Локальный сброс без обращения к серверу — когда сессии там уже нет. */
+  clearSession: () => void
   /** Демо-личность не осталась поверх настоящих данных банка? */
   isSessionConsistent: () => boolean
   updateUser: (user: Partial<User>) => void
@@ -85,6 +87,15 @@ export const useAuthStore = create<AuthState>()(
       logout: () => {
         setDemo(false)
         apiFetch('/api/logout', { method: 'POST' }).catch(() => {})
+        set({ isAuthenticated: false, user: null, token: null })
+      },
+
+      // Сервер сообщил, что сессии у него нет. Звать /api/logout в этом случае
+      // НЕЛЬЗЯ: он стирает учётные данные и закрывает браузер — а вход мог
+      // как раз идти фоном, и мы бы убили его на полпути. Именно так
+      // приложение разлогинивало само себя в ту же секунду после входа.
+      clearSession: () => {
+        setDemo(false)
         set({ isAuthenticated: false, user: null, token: null })
       },
 

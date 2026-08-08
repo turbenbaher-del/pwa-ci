@@ -22,7 +22,7 @@ import { NotificationsPage } from './pages/NotificationsPage'
 import { ConfirmModal } from './components/ConfirmModal'
 
 export function App() {
-  const { isAuthenticated, isSessionConsistent, logout } = useAuthStore()
+  const { isAuthenticated, isSessionConsistent, logout, clearSession } = useAuthStore()
   const { isDark, fontSize } = useThemeStore()
 
   useEffect(() => {
@@ -52,10 +52,10 @@ export function App() {
   // и стирается после простоя). Возвращаем человека на вход, вместо того
   // чтобы показывать ошибку на каждом экране.
   useEffect(() => {
-    const onExpired = () => logout()
+    const onExpired = () => clearSession()
     window.addEventListener('session-expired', onExpired)
     return () => window.removeEventListener('session-expired', onExpired)
-  }, [logout])
+  }, [clearSession])
 
   return (
     // basename берём из base сборки, чтобы приложение жило и в подпапке, и в корне домена
