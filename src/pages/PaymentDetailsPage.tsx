@@ -5,6 +5,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useEffect, useState } from 'react'
 import { SignModal } from '../components/SignModal'
+import { apiFetchBlob } from '../utils/api'
 import '../styles/pages.css'
 
 const cardStyle = {
@@ -24,6 +25,32 @@ export function PaymentDetailsPage() {
   const navigate = useNavigate()
   const { getPaymentById, fetchPaymentById, fetchPayments } = usePaymentsStore()
   const [showSignModal, setShowSignModal] = useState(false)
+  const [printing, setPrinting] = useState(false)
+  const [printError, setPrintError] = useState('')
+
+  // Файл приходит потоком, а не JSON: открываем его как обычную загрузку
+  const printDoc = async () => {
+    if (!payment) return
+    setPrinting(true); setPrintError('')
+    try {
+      const { blob, filename } = await apiFetchBlob(
+        `/api/documents/${encodeURIComponent(payment.id)}/print?format=PDF`)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename || `Платёжное поручение ${payment.number || ''}.pdf`.trim()
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      // Ссылку освобождаем не сразу: Safari на iPhone обрывает скачивание,
+      // если отозвать её в тот же момент
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
+    } catch (e) {
+      setPrintError(e instanceof Error ? e.message : 'Не удалось получить платёжку')
+    } finally {
+      setPrinting(false)
+    }
+  }
   const [loading, setLoading] = useState(false)
 
   const payment = id ? getPaymentById(id) : undefined
@@ -154,6 +181,24 @@ export function PaymentDetailsPage() {
             </p>
           </div>
         )}
+
+        {/* Печатная форма с отметкой банка: её просят контрагенты и налоговая,
+            и сделать такую самим нельзя — отметку ставит банк */}
+        <div style={cardStyle}>
+          <button onClick={printDoc} className="btn btn-secondary btn-block" disabled={printing}>
+            {printing ? <span className="spinner" /> : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <polyline points="6 9 6 2 18 2 18 9" />
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                <rect x="6" y="14" width="12" height="8" />
+              </svg>
+            )}
+            Скачать платёжку (PDF)
+          </button>
+          {printError && (
+            <div className="alert alert-danger" style={{ marginTop: '0.75rem' }}>{printError}</div>
+          )}
+        </div>
 
         {showSignModal && (
           <SignModal
