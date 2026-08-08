@@ -47,6 +47,15 @@ export function App() {
     if (isAuthenticated && !isSessionConsistent()) logout()
   }, [isAuthenticated, isSessionConsistent, logout])
 
+  // Сервер сообщил, что сессия в банке завершилась (пароль там не хранится
+  // и стирается после простоя). Возвращаем человека на вход, вместо того
+  // чтобы показывать ошибку на каждом экране.
+  useEffect(() => {
+    const onExpired = () => logout()
+    window.addEventListener('session-expired', onExpired)
+    return () => window.removeEventListener('session-expired', onExpired)
+  }, [logout])
+
   return (
     // basename берём из base сборки, чтобы приложение жило и в подпапке, и в корне домена
     <Router basename={import.meta.env.BASE_URL}>

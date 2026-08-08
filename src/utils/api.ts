@@ -45,6 +45,13 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   if (!res.ok) {
     const body = await res.json().catch(() => ({} as { error?: string }))
     if (res.status === 401) {
+      // Пароль ДБО не хранится на сервере: после перезапуска или простоя
+      // сессия исчезает, и войти нужно заново. Показываем экран входа сразу,
+      // а не заваливаем человека ошибками на каждом экране.
+      if (body.needLogin) {
+        window.dispatchEvent(new CustomEvent('session-expired'))
+        throw new Error('Сессия завершена — войдите заново')
+      }
       throw new Error(body.error || 'Прокси отклонил запрос: проверьте VITE_PROXY_TOKEN')
     }
     throw new Error(body.error || `HTTP ${res.status}`)
