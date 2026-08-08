@@ -1,8 +1,12 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useAuthStore } from '../store/auth'
 import { useThemeStore } from '../store/theme'
+import {
+  isBiometricSupported, isBiometricEnabled, disableBiometric, biometricName,
+} from '../utils/biometric'
 import { toTitleCase } from '../utils/format'
 import '../styles/pages.css'
 
@@ -10,6 +14,26 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const { user, logout } = useAuthStore()
   const { isDark, toggleDark, fontSize, setFontSize } = useThemeStore()
+
+  // Вход по Face ID / отпечатку
+  const [bioSupported, setBioSupported] = useState(false)
+  const [bioEnabled, setBioEnabled] = useState(false)
+  const bioName = biometricName()
+
+  useEffect(() => {
+    isBiometricSupported().then(async ok => {
+      setBioSupported(ok)
+      if (ok) setBioEnabled(await isBiometricEnabled())
+    })
+  }, [])
+
+  // Включение возможно только в момент входа — там есть пароль. Здесь
+  // осознанно оставлено лишь отключение: сохранять пароль «задним числом»
+  // неоткуда, а делать вид, что можно, — обманывать.
+  const turnOffBiometric = async () => {
+    await disableBiometric()
+    setBioEnabled(false)
+  }
   const handleLogout = () => {
     logout()
     navigate('/login')
@@ -116,6 +140,26 @@ export function SettingsPage() {
                 Журнал действий
               </button>
             </div>
+
+            {bioSupported && (
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={labelStyle}>Вход по {bioName}</span>
+                  {bioEnabled ? (
+                    <button className="btn btn-secondary btn-sm" onClick={turnOffBiometric}>
+                      Отключить
+                    </button>
+                  ) : (
+                    <span className="badge badge-neutral" style={{ flexShrink: 0 }}>выключен</span>
+                  )}
+                </div>
+                <div style={{ marginTop: '0.5rem', fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
+                  {bioEnabled
+                    ? `Логин и пароль хранятся на этом устройстве в зашифрованном виде и открываются только после подтверждения по ${bioName}. При отключении стираются.`
+                    : `Включается при следующем входе по паролю — приложение само предложит.`}
+                </div>
+              </div>
+            )}
 
             <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--color-border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
               <span style={labelStyle}>Подтверждение операций</span>

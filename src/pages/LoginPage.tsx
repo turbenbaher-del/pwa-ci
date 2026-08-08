@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/auth'
 import { Logo } from '../components/Logo'
+import {
+  isBiometricSupported, isBiometricEnabled, unlockWithBiometric,
+  enableBiometric, biometricName,
+} from '../utils/biometric'
 import '../styles/pages.css'
 
 export function LoginPage() {
@@ -12,6 +16,44 @@ export function LoginPage() {
   const navigate = useNavigate()
   const authLogin = useAuthStore((state) => state.login)
   const loginDemo = useAuthStore((state) => state.loginDemo)
+
+  // Вход по Face ID / отпечатку
+  const [bioReady, setBioReady] = useState(false)      // настроен на устройстве
+  const [bioOffer, setBioOffer] = useState(false)      // можно предложить включить
+  const [bioBusy, setBioBusy] = useState(false)
+  const bioName = biometricName()
+
+  useEffect(() => {
+    isBiometricSupported().then(async supported => {
+      if (!supported) return
+      const enabled = await isBiometricEnabled()
+      setBioReady(enabled)
+      setBioOffer(!enabled)
+    })
+  }, [])
+
+  // Настроенный вход просим сразу: человек открыл приложение, чтобы войти,
+  // а не чтобы сначала нажать лишнюю кнопку.
+  useEffect(() => {
+    if (bioReady) handleBiometric()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bioReady])
+
+  const handleBiometric = async () => {
+    setBioBusy(true); setError('')
+    try {
+      const creds = await unlockWithBiometric()
+      await authLogin(creds.login, creds.password)
+      navigate('/')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Не удалось войти по биометрии'
+      // «Отменён» — это осознанное действие человека, а не сбой: не пугаем
+      if (msg !== 'Вход отменён') setError(msg)
+      setBioReady(await isBiometricEnabled())
+    } finally {
+      setBioBusy(false)
+    }
+  }
 
   const handleDemo = () => {
     loginDemo()
@@ -24,6 +66,20 @@ export function LoginPage() {
     setError('')
     try {
       await authLogin(login, password)
+      // Предлагаем включить биометрию только после УДАЧНОГО входа: иначе
+      // сохранили бы неверный пароль и потом входили бы им по Face ID.
+      if (bioOffer) {
+        const yes = window.confirm(
+          `Входить по ${bioName} в следующий раз?
+
+` +
+          'Логин и пароль сохранятся на этом устройстве в зашифрованном виде ' +
+          'и будут доступны только после подтверждения личности.'
+        )
+        if (yes) {
+          try { await enableBiometric(login, password) } catch { /* отказ — не мешаем входу */ }
+        }
+      }
       navigate('/')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Ошибка при входе')
@@ -38,6 +94,37 @@ export function LoginPage() {
         <h2 className="login-form-title">Вход в систему</h2>
         <p className="login-form-desc">Введите ваши учётные данные для входа</p>
       </div>
+
+      {/* Настроенный вход по биометрии — первым: он и есть основной способ */}
+      {bioReady && (
+        <div style={{ marginBottom: '1.25rem' }}>
+          <button
+            type="button"
+            className="btn btn-primary btn-block"
+            onClick={handleBiometric}
+            disabled={bioBusy || loading}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+          >
+            {bioBusy ? <span className="spinner" /> : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                <path d="M12 11v2a9 9 0 0 1-.5 3" />
+                <path d="M8.5 8.5a5 5 0 0 1 7 4.5v1" />
+                <path d="M5 12a7 7 0 0 1 3-5.8" />
+                <path d="M16 6.2A7 7 0 0 1 19 12v1.5" />
+                <path d="M8 20a12 12 0 0 0 1-4.5V13" />
+                <path d="M15.5 19.5a16 16 0 0 0 .8-4" />
+              </svg>
+            )}
+            Войти по {bioName}
+          </button>
+          <div style={{
+            textAlign: 'center', margin: '0.875rem 0 0',
+            fontSize: 'var(--text-xs)', color: 'var(--color-text-muted)',
+          }}>
+            или введите логин и пароль
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         {error && (
