@@ -7,6 +7,9 @@ import { useContractorsStore } from '../store/contractors'
 import { useTemplatesStore, type PaymentTemplate } from '../store/templates'
 import { confirm } from '../store/confirm'
 import { formatCurrency } from '../utils/format'
+import { apiFetch } from '../utils/api'
+import { SignModal } from '../components/SignModal'
+import type { Payment } from '../store/payments'
 import '../styles/pages.css'
 
 // Центр-Инвест БИК — платёж внутри банка идёт без комиссии.
@@ -24,7 +27,7 @@ function estimateCommission(amount: number, bic: string, currency: string): stri
 
 export function CreatePaymentPage() {
   const navigate = useNavigate()
-  const { createPayment, error, clearError } = usePaymentsStore()
+  const { error, clearError } = usePaymentsStore()
   const { accounts, fetchAccounts } = useAccountsStore()
   const { contractors } = useContractorsStore()
   const { templates, addTemplate, removeTemplate, touchTemplate } = useTemplatesStore()
@@ -33,6 +36,17 @@ export function CreatePaymentPage() {
   const [formError, setFormError] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)   // прогрессивное раскрытие (из Т)
+  // Созданный документ, который сразу предлагаем подписать
+  const [created, setCreated] = useState<Payment | null>(null)
+  const [signedOk, setSignedOk] = useState(false)
+  // Контрагенты из справочника банка — чтобы не набирать реквизиты руками
+  const [partners, setPartners] = useState<any[]>([])
+
+  useEffect(() => {
+    apiFetch('/api/partners')
+      .then(res => setPartners(res.data ?? []))
+      .catch(() => {})   // без справочника форма работает, просто вводить руками
+  }, [])
 
   const [formData, setFormData] = useState<{
     payerAccount: string; amount: string; currency: string; date: string
@@ -168,38 +182,49 @@ export function CreatePaymentPage() {
     if (!res.ok) return
 
     setLoading(true)
-    setSuccessMsg('')
+    setSuccessMsg(''); setFormError('')
     try {
-      const selectedAccount = accounts.find(a => a.number === formData.payerAccount)
-      const created = await createPayment({
-        status: 'draft',
-        amount: parseFloat(formData.amount),
-        currency: formData.currency,
-        date: new Date(formData.date),
-        recipient: {
-          name:    formData.recipientName,
-          account: formData.recipientAccount.replace(/\s/g, ''),
-          bank:    formData.recipientBank,
-          bic:     formData.recipientBic.replace(/\D/g, ''),
-          inn:     formData.recipientInn.replace(/\D/g, ''),
-          kpp:     formData.recipientKpp.replace(/\D/g, ''),
-        },
-        payer: {
-          name:    user?.name ?? 'Организация',
-          account: formData.payerAccount,
-        },
-        purpose:           formData.purpose,
-        priority:          formData.priority,
-        commissionPayment: formData.commissionPayment,
-        details:           { payerCurrency: selectedAccount?.currency ?? 'RUB' },
+      // Платёж уходит той же формой банка, что и перевод между своими
+      // счетами. Документ создаётся ЧЕРНОВИКОМ: деньги двигает только подпись.
+      const json = await apiFetch('/api/pay-contragent', {
+        method: 'POST',
+        body: JSON.stringify({
+          fromAccount:     formData.payerAccount,
+          amount:          parseFloat(formData.amount),
+          purpose:         formData.purpose,
+          receiverName:    formData.recipientName,
+          receiverInn:     formData.recipientInn.replace(/\D/g, ''),
+          receiverKpp:     formData.recipientKpp.replace(/\D/g, ''),
+          receiverAccount: formData.recipientAccount.replace(/\s/g, ''),
+          receiverBic:     formData.recipientBic.replace(/\D/g, ''),
+        }),
       })
-      if (created.status === 'created' || created.status === 'sent') {
-        navigate('/payments')
+      if (json.success === false) throw new Error(json.error || 'Банк не принял платёж')
+
+      // Сразу предлагаем подписать — искать документ в списке не нужно
+      const id = json.data?.id
+      if (id) {
+        setCreated({
+          id,
+          number: undefined,
+          status: 'draft',
+          amount: -parseFloat(formData.amount),
+          currency: formData.currency,
+          date: new Date(),
+          recipient: {
+            name: formData.recipientName,
+            account: formData.recipientAccount.replace(/\s/g, ''),
+            bank: formData.recipientBank,
+            bic: formData.recipientBic.replace(/\D/g, ''),
+          },
+          payer: { name: user?.name ?? '', account: formData.payerAccount },
+          purpose: formData.purpose,
+        } as Payment)
       } else {
-        setSuccessMsg('Платёж сохранён как черновик. Откройте ДБО банка для подписи и отправки.')
+        setSuccessMsg('Платёж создан. Откройте его в «Платежах» и подпишите — иначе деньги не уйдут.')
       }
-    } catch {
-      // error from store is shown below
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : 'Не удалось создать платёж')
     } finally {
       setLoading(false)
     }
@@ -312,6 +337,39 @@ export function CreatePaymentPage() {
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
+              </div>
+            )}
+
+            {/* Контрагенты из справочника банка: реквизиты подставляются
+                целиком, что снимает риск опечатки в счёте или БИК */}
+            {partners.length > 0 && (
+              <div className="form-group">
+                <label>Выбрать из контрагентов</label>
+                <select
+                  value=""
+                  onChange={e => {
+                    const pt = partners.find(x => x.id === e.target.value)
+                    if (!pt) return
+                    setFormData(prev => ({
+                      ...prev,
+                      recipientName:    pt.name || prev.recipientName,
+                      recipientAccount: pt.account || prev.recipientAccount,
+                      recipientBic:     pt.bic || prev.recipientBic,
+                      recipientBank:    pt.bank || prev.recipientBank,
+                      recipientInn:     pt.inn || prev.recipientInn,
+                    }))
+                    setFormError('')
+                  }}
+                  disabled={loading}
+                >
+                  <option value="">— выберите, чтобы подставить реквизиты —</option>
+                  {partners.map(pt => (
+                    <option key={pt.id} value={pt.id}>
+                      {pt.name}{pt.account ? ` · …${String(pt.account).slice(-4)}` : ''}
+                    </option>
+                  ))}
+                </select>
+                <div className="form-hint">{partners.length} контрагентов из базы банка</div>
               </div>
             )}
 
@@ -495,7 +553,7 @@ export function CreatePaymentPage() {
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               )}
-              {loading ? 'Создание...' : 'Создать платёж'}
+              {loading ? 'Создание...' : 'Подписать и отправить'}
             </button>
             <button
               type="button"
@@ -509,6 +567,20 @@ export function CreatePaymentPage() {
           </div>
         </form>
       </div>
+
+      {created && (
+        <SignModal
+          payment={created}
+          onClose={() => {
+            setCreated(null)
+            // Подписанный документ нельзя провожать советом «подпишите позже»
+            if (signedOk) { navigate('/payments'); return }
+            setSuccessMsg('Платёж создан. Его можно подписать позже в «Платежах».')
+          }}
+          // Успех НЕ закрывает окно: человек должен увидеть, что платёж ушёл
+          onSigned={() => setSignedOk(true)}
+        />
+      )}
     </div>
   )
 }
