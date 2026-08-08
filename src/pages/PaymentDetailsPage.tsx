@@ -5,7 +5,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import { useEffect, useState } from 'react'
 import { SignModal } from '../components/SignModal'
-import { apiFetchBlob } from '../utils/api'
+import { apiFetch, apiFetchBlob } from '../utils/api'
 import '../styles/pages.css'
 
 const cardStyle = {
@@ -25,7 +25,26 @@ export function PaymentDetailsPage() {
   const navigate = useNavigate()
   const { getPaymentById, fetchPaymentById, fetchPayments } = usePaymentsStore()
   const [showSignModal, setShowSignModal] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [printing, setPrinting] = useState(false)
+
+  const removeDoc = async () => {
+    if (!payment) return
+    if (!window.confirm('Удалить черновик? Восстановить его будет нельзя.')) return
+    setRemoving(true)
+    try {
+      const json = await apiFetch('/api/documents/delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids: [payment.id] }),
+      })
+      if (json.success === false) throw new Error(json.error || 'Банк не удалил документ')
+      navigate('/payments')
+    } catch (e) {
+      setPrintError(e instanceof Error ? e.message : 'Не удалось удалить')
+    } finally {
+      setRemoving(false)
+    }
+  }
   const [printError, setPrintError] = useState('')
 
   // Файл приходит потоком, а не JSON: открываем его как обычную загрузку
@@ -179,6 +198,17 @@ export function PaymentDetailsPage() {
               Потребуется ключ с токена и подтверждение в PayControl на телефоне —
               как в веб-версии банка.
             </p>
+          </div>
+        )}
+
+        {/* Удаление доступно только для черновиков: банк всё равно проверит
+            и откажет, но незачем показывать кнопку, которая заведомо не сработает */}
+        {(payment.status === 'draft' || payment.status === 'created') && (
+          <div style={cardStyle}>
+            <button onClick={removeDoc} className="btn btn-ghost btn-block" disabled={removing}>
+              {removing ? <span className="spinner" /> : null}
+              Удалить черновик
+            </button>
           </div>
         )}
 
