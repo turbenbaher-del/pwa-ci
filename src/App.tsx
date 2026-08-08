@@ -16,6 +16,7 @@ import { ContractorsPage } from './pages/ContractorsPage'
 import { StatementsPage } from './pages/StatementsPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { TariffsPage } from './pages/TariffsPage'
+import { BudgetPaymentPage } from './pages/BudgetPaymentPage'
 import { MailPage } from './pages/MailPage'
 import { AuditPage } from './pages/AuditPage'
 import { SettingsPage } from './pages/SettingsPage'
@@ -79,6 +80,7 @@ export function App() {
           <Route path="/sections/:key" element={<SectionPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/payments/budget" element={<BudgetPaymentPage />} />
           <Route path="/mail" element={<MailPage />} />
           <Route path="/audit" element={<AuditPage />} />
         </Route>
